@@ -115,7 +115,6 @@ export default function PatientDetail() {
       )}
 
       <div className="px-8 py-6 grid grid-cols-1 lg:grid-cols-2 gap-8">
-        {/* The doctor's complete digital memory for this patient */}
         <div className="space-y-8">
           <div>
             <h2 className="font-display text-lg text-ink mb-3">வருகை வரலாறு · Visit Timeline</h2>
@@ -204,7 +203,6 @@ export default function PatientDetail() {
           </div>
         </div>
 
-        {/* New visit + prescription + billing workflow */}
         <div>
           <h2 className="font-display text-lg text-ink mb-3">புதிய பரிசோதனை · New Visit</h2>
           <div className="chit px-5 py-5 space-y-4">
