@@ -81,9 +81,6 @@ export default function Queue() {
                   </div>
                 )}
 
-                {/* Connects the queue directly to the visit workflow —
-                    previously the doctor had to separately search for
-                    the patient in the Patients tab to do anything. */}
                 {t.patient_id ? (
                   <Link
                     to={`/patients/${t.patient_id}`}
