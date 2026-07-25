@@ -12,8 +12,38 @@ const STATUS_LABEL = {
 
 const NEXT_STATUS = { waiting: 'in_consultation', in_consultation: 'completed' };
 
+function VitalsQuickEntry({ token, onSave }) {
+  const [vitals, setVitals] = useState(token.vitals || {});
+  const [saved, setSaved] = useState(false);
+
+  const handleSave = async () => {
+    await onSave(token.id, vitals);
+    setSaved(true);
+    setTimeout(() => setSaved(false), 1500);
+  };
+
+  return (
+    <div className="mt-3 border-t border-ink/10 pt-3">
+      <div className="text-[10px] text-ink-soft uppercase tracking-wide mb-1.5">
+        உதவியாளர் பதிவு · Assistant: Vitals
+      </div>
+      <div className="grid grid-cols-3 gap-1.5">
+        <input placeholder="BP" value={vitals.bp || ''} onChange={(e) => setVitals({ ...vitals, bp: e.target.value })}
+          className="border border-ink/15 rounded px-2 py-1 text-xs" />
+        <input placeholder="Sugar" value={vitals.sugar || ''} onChange={(e) => setVitals({ ...vitals, sugar: e.target.value })}
+          className="border border-ink/15 rounded px-2 py-1 text-xs" />
+        <input placeholder="Weight" value={vitals.weight || ''} onChange={(e) => setVitals({ ...vitals, weight: e.target.value })}
+          className="border border-ink/15 rounded px-2 py-1 text-xs" />
+      </div>
+      <button onClick={handleSave} className="mt-1.5 text-[11px] text-brass-deep hover:text-ink underline underline-offset-2">
+        {saved ? 'சேமிக்கப்பட்டது ✓' : 'Vitals சேமி · Save'}
+      </button>
+    </div>
+  );
+}
+
 export default function Queue() {
-  const { tokens, issueToken, updateStatus } = useQueue();
+  const { tokens, issueToken, updateStatus, updateVitals } = useQueue();
   const { patients } = usePatients();
   const [selectedPatient, setSelectedPatient] = useState('');
 
@@ -26,12 +56,17 @@ export default function Queue() {
     <div>
       <Header title="இன்றைய வரிசை" subtitle="Today's Queue" />
 
-      <div className="px-8 py-6">
-        <div className="flex gap-3 mb-8">
+      <div className="px-4 sm:px-8 py-4 sm:py-6">
+        {/* Stacked on mobile instead of a fixed-width side-by-side row —
+            the previous layout could overflow the screen width, which
+            was also why the (fixed, but this made it worse) top menu
+            bar seemed to "disappear" when scrolled sideways to reach
+            this button. */}
+        <div className="flex flex-col sm:flex-row gap-3 mb-6 sm:mb-8">
           <select
             value={selectedPatient}
             onChange={(e) => setSelectedPatient(e.target.value)}
-            className="border border-ink/15 rounded px-3 py-2 flex-1 max-w-xs bg-white"
+            className="border border-ink/15 rounded px-3 py-2 w-full sm:flex-1 sm:max-w-xs bg-white"
           >
             <option value="">நேரடி வருகை (இன்னும் பதிவு செய்யவில்லை) · Walk-in</option>
             {patients.map((p) => (
@@ -40,7 +75,7 @@ export default function Queue() {
           </select>
           <button
             onClick={handleIssue}
-            className="bg-ink text-cream px-5 py-2 rounded font-medium hover:bg-ink-soft"
+            className="bg-ink text-cream px-5 py-2 rounded font-medium hover:bg-ink-soft whitespace-nowrap"
           >
             + புதிய வரிசை எண் · New Token
           </button>
@@ -81,9 +116,17 @@ export default function Queue() {
                   </div>
                 )}
 
+                {/* Assistant/nurse captures vitals here while the patient
+                    waits — the doctor's visit form picks this up
+                    automatically via the link below. */}
+                {t.status === 'waiting' && (
+                  <VitalsQuickEntry token={t} onSave={updateVitals} />
+                )}
+
                 {t.patient_id ? (
                   <Link
                     to={`/patients/${t.patient_id}`}
+                    state={{ vitals: t.vitals }}
                     className="mt-3 inline-block text-xs font-medium bg-brass text-ink rounded px-3 py-1.5 hover:bg-brass-deep hover:text-cream"
                   >
                     நோயாளி பதிவைத் திற · Open Consultation
