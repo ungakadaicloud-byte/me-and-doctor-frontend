@@ -14,6 +14,8 @@ export default function ProtectedLayout() {
     <div className="flex min-h-screen bg-cream">
       <Sidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
+      {/* Tap-outside-to-close overlay — mobile only (md:hidden), and
+          only rendered while the sidebar is actually open */}
       {sidebarOpen && (
         <div
           className="fixed inset-0 bg-black/40 z-30 md:hidden"
@@ -23,7 +25,14 @@ export default function ProtectedLayout() {
       )}
 
       <div className="flex-1 flex flex-col min-w-0">
-        <div className="md:hidden flex items-center gap-3 px-4 py-3 border-b border-ink/10 bg-cream sticky top-0 z-20">
+        {/* Mobile-only top bar with hamburger — hidden entirely on
+            desktop (md:hidden). Changed from `sticky` to `fixed`:
+            `sticky` only locks vertical position, so a page with
+            horizontal overflow (e.g. a wide row of buttons) could
+            scroll the whole bar off to the side, hiding the menu
+            button. `fixed` locks it to the viewport in both directions
+            regardless of any page's own layout. */}
+        <div className="md:hidden fixed top-0 left-0 right-0 flex items-center gap-3 px-4 py-3 border-b border-ink/10 bg-cream z-20">
           <button
             onClick={() => setSidebarOpen(true)}
             aria-label="Open menu"
@@ -38,7 +47,7 @@ export default function ProtectedLayout() {
           <span className="font-display text-sm text-ink">Me &amp; Doctor</span>
         </div>
 
-        <main className="flex-1">
+        <main className="flex-1 pt-14 md:pt-0">
           <Outlet />
         </main>
       </div>
