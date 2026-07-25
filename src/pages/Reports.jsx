@@ -18,7 +18,7 @@ export default function Reports() {
 
   return (
     <div>
-      <Header title="அறிக்கைகள்" subtitle="Basic Reports" />
+      <Header title="அறிக்கைகள்" subtitle="Reports" />
 
       <div className="px-8 py-6">
         <div className="flex gap-2 mb-4">
@@ -36,14 +36,18 @@ export default function Reports() {
         </div>
 
         <h2 className="font-display text-lg text-ink mb-3">கடந்த {days} நாட்கள் · Last {days} Days</h2>
-        <div className="grid grid-cols-2 gap-4 max-w-md mb-8">
-          <div className="chit px-5 py-5">
-            <div className="text-xs text-ink-soft uppercase tracking-wide">Daily Collection ({days}d)</div>
-            <div className="token-number text-2xl text-ink mt-1">₹{totalCollection.toLocaleString('en-IN')}</div>
+
+        {/* Colorful summary cards, matching Dashboard/Billing — the daily
+            breakdown list below stays white/"chit" since it's a scannable
+            row-by-row record. */}
+        <div className="grid grid-cols-2 gap-3 sm:gap-4 max-w-md mb-8">
+          <div className="bg-ink rounded-xl px-4 py-4 sm:px-5 sm:py-5">
+            <div className="text-brass text-[10px] sm:text-xs uppercase tracking-wide font-semibold">தினசரி வரவு · Daily Collection</div>
+            <div className="font-display font-semibold text-xl sm:text-2xl text-white mt-1">₹{totalCollection.toLocaleString('en-IN')}</div>
           </div>
-          <div className="chit px-5 py-5">
-            <div className="text-xs text-ink-soft uppercase tracking-wide">Daily Patients ({days}d)</div>
-            <div className="token-number text-2xl text-ink mt-1">{totalPatients}</div>
+          <div className="bg-sage rounded-xl px-4 py-4 sm:px-5 sm:py-5">
+            <div className="text-white/70 text-[10px] sm:text-xs uppercase tracking-wide font-semibold">தினசரி நோயாளிகள் · Daily Patients</div>
+            <div className="font-display font-semibold text-xl sm:text-2xl text-white mt-1">{totalPatients}</div>
           </div>
         </div>
 
@@ -51,7 +55,7 @@ export default function Reports() {
           {daily.map((d) => (
             <div key={d.date} className="flex justify-between text-sm px-2 py-1.5 border-b border-ink/10">
               <span className="text-ink-soft">{d.date}</span>
-              <span className="text-ink">{d.patients} patients</span>
+              <span className="text-ink">{d.patients} நோயாளிகள்</span>
               <span className="text-brass-deep">₹{d.collection.toLocaleString('en-IN')}</span>
             </div>
           ))}
@@ -62,7 +66,7 @@ export default function Reports() {
           {pending.map((p) => (
             <Link key={p.id} to={`/patients/${p.visits?.patient_id}`} className="chit flex justify-between px-5 py-3">
               <div>
-                <div className="text-ink">{p.visits?.patients?.name || 'Patient'}</div>
+                <div className="text-ink">{p.visits?.patients?.name || 'நோயாளி'}</div>
                 <div className="text-xs text-ink-soft">{new Date(p.created_at).toLocaleDateString()}</div>
               </div>
               <span className="font-medium text-clay">₹{Number(p.amount).toLocaleString('en-IN')}</span>
