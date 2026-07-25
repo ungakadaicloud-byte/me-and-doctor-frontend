@@ -4,17 +4,16 @@ import { useAuth } from '../hooks/useAuth';
 import Sidebar from './Sidebar';
 
 export default function ProtectedLayout() {
-  const { claims } = useAuth();
+  const { session, loading } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
-  if (!claims) return <Navigate to="/login" replace />;
+  if (loading) return null; // avoid a flash-redirect while the session is still being read
+  if (!session) return <Navigate to="/login" replace />;
 
   return (
     <div className="flex min-h-screen bg-cream">
       <Sidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
-      {/* Tap-outside-to-close overlay — mobile only (md:hidden), and
-          only rendered while the sidebar is actually open */}
       {sidebarOpen && (
         <div
           className="fixed inset-0 bg-black/40 z-30 md:hidden"
@@ -24,8 +23,6 @@ export default function ProtectedLayout() {
       )}
 
       <div className="flex-1 flex flex-col min-w-0">
-        {/* Mobile-only top bar with hamburger — hidden entirely on
-            desktop (md:hidden), so desktop layout is untouched */}
         <div className="md:hidden flex items-center gap-3 px-4 py-3 border-b border-ink/10 bg-cream sticky top-0 z-20">
           <button
             onClick={() => setSidebarOpen(true)}
