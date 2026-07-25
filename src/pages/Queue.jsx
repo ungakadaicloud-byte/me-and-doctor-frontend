@@ -33,7 +33,7 @@ export default function Queue() {
             onChange={(e) => setSelectedPatient(e.target.value)}
             className="border border-ink/15 rounded px-3 py-2 flex-1 max-w-xs bg-white"
           >
-            <option value="">Walk-in (இன்னும் பதிவு செய்யவில்லை)</option>
+            <option value="">நேரடி வருகை (இன்னும் பதிவு செய்யவில்லை) · Walk-in</option>
             {patients.map((p) => (
               <option key={p.id} value={p.id}>{p.name}</option>
             ))}
@@ -42,14 +42,14 @@ export default function Queue() {
             onClick={handleIssue}
             className="bg-ink text-cream px-5 py-2 rounded font-medium hover:bg-ink-soft"
           >
-            + புதிய டோக்கன் · New Token
+            + புதிய வரிசை எண் · New Token
           </button>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-8">
           {tokens.length === 0 && (
             <p className="text-ink-soft text-sm col-span-full">
-              இன்று இன்னும் யாரும் இல்லை. புதிய டோக்கன் வழங்கத் தொடங்குங்கள்.
+              இன்று இன்னும் யாரும் இல்லை. புதிய வரிசை எண் வழங்கத் தொடங்குங்கள்.
             </p>
           )}
 
@@ -62,7 +62,7 @@ export default function Queue() {
                   <div className="token-number text-3xl text-ink">{String(t.token_number).padStart(2, '0')}</div>
                   <span className={`text-xs font-medium ${status.color}`}>{status.en}</span>
                 </div>
-                <div className="mt-2 text-sm text-ink">{t.patients?.name || 'Walk-in'}</div>
+                <div className="mt-2 text-sm text-ink">{t.patients?.name || 'நேரடி வருகை · Walk-in'}</div>
 
                 {!isFinal && (
                   <div className="flex flex-wrap gap-3 mt-4">
@@ -90,7 +90,7 @@ export default function Queue() {
                   </Link>
                 ) : (
                   <p className="mt-3 text-[11px] text-ink-soft">
-                    Walk-in — ஆலோசனை பதிவு செய்ய முதலில் Patients-ல் பதிவு செய்யுங்கள்
+                    நேரடி வருகை — ஆலோசனை பதிவு செய்ய முதலில் Patients-ல் பதிவு செய்யுங்கள்
                   </p>
                 )}
               </div>
