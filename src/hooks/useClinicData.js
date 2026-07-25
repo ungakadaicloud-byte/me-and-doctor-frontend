@@ -133,7 +133,15 @@ export function useQueue() {
     reload();
   }, [reload]);
 
-  return { tokens, loading, issueToken, updateStatus };
+  // Lets an assistant/nurse record BP/Sugar/Weight while the patient is
+  // still waiting — the doctor's New Visit form later auto-fills from
+  // whatever was captured here.
+  const updateVitals = useCallback(async (tokenId, vitals) => {
+    await api.patch(`/api/queue/token/${tokenId}`, { vitals });
+    reload();
+  }, [reload]);
+
+  return { tokens, loading, issueToken, updateStatus, updateVitals };
 }
 
 export function useBilling(range = 'day') {
@@ -184,4 +192,21 @@ export function useReports(days = 7) {
   }, [days]);
 
   return { daily, pending, loading };
+}
+
+// Powers "Print Today's Register" — a digital stand-in for the old
+// paper register book, generated on demand rather than kept loaded.
+export function useDailyRegister() {
+  const [register, setRegister] = useState(null);
+  const [loading, setLoading] = useState(false);
+
+  const fetchRegister = useCallback(async () => {
+    setLoading(true);
+    const { data } = await api.get('/api/reports/daily-register');
+    setRegister(data);
+    setLoading(false);
+    return data;
+  }, []);
+
+  return { register, loading, fetchRegister };
 }
