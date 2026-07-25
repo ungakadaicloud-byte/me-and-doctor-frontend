@@ -2,7 +2,7 @@ import { NavLink } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 
 const links = [
-  { to: '/', label: 'டாஷ்போர்டு', sub: 'Dashboard' },
+  { to: '/', label: 'முகப்பு', sub: 'Dashboard' },
   { to: '/queue', label: 'இன்றைய வரிசை', sub: "Today's Queue" },
   { to: '/patients', label: 'நோயாளிகள்', sub: 'Patients' },
   { to: '/billing', label: 'வரவு', sub: 'Billing' },
