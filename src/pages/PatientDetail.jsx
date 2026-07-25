@@ -115,6 +115,7 @@ export default function PatientDetail() {
       )}
 
       <div className="px-8 py-6 grid grid-cols-1 lg:grid-cols-2 gap-8">
+        {/* The doctor's complete digital memory for this patient */}
         <div className="space-y-8">
           <div>
             <h2 className="font-display text-lg text-ink mb-3">வருகை வரலாறு · Visit Timeline</h2>
@@ -177,7 +178,7 @@ export default function PatientDetail() {
                   className="chit flex justify-between px-5 py-3 hover:bg-parchment">
                   <div>
                     <div className="text-xs text-brass-deep">{new Date(b.created_at).toLocaleDateString()}</div>
-                    {b.invoice_number && <div className="text-xs text-ink-soft">Invoice #{b.invoice_number}</div>}
+                    {b.invoice_number && <div className="text-xs text-ink-soft">ரசீது #{b.invoice_number}</div>}
                   </div>
                   <div className="text-right">
                     <div className={`text-xs uppercase ${b.payment_status === 'paid' ? 'text-sage' : 'text-clay'}`}>{b.payment_status}</div>
@@ -203,32 +204,33 @@ export default function PatientDetail() {
           </div>
         </div>
 
+        {/* New visit + prescription + billing workflow */}
         <div>
           <h2 className="font-display text-lg text-ink mb-3">புதிய பரிசோதனை · New Visit</h2>
           <div className="chit px-5 py-5 space-y-4">
             <textarea
-              placeholder="வருகைக்கான காரணம் · Chief Complaint"
+              placeholder="Chief Complaint"
               value={chiefComplaint}
               onChange={(e) => setChiefComplaint(e.target.value)}
               className="w-full border border-ink/15 rounded px-3 py-2 text-sm"
               rows={2}
             />
             <textarea
-              placeholder="மருத்துவ குறிப்புகள் · Clinical Notes"
+              placeholder="Clinical Notes"
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
               className="w-full border border-ink/15 rounded px-3 py-2 text-sm"
               rows={2}
             />
             <textarea
-              placeholder="நோய் கண்டறிதல் · Diagnosis"
+              placeholder="Diagnosis"
               value={diagnosis}
               onChange={(e) => setDiagnosis(e.target.value)}
               className="w-full border border-ink/15 rounded px-3 py-2 text-sm"
               rows={2}
             />
             <textarea
-              placeholder="Lab / Test பரிந்துரைகள் · Lab/Test Recommendations"
+              placeholder="Lab / Test Recommendations"
               value={labTests}
               onChange={(e) => setLabTests(e.target.value)}
               className="w-full border border-ink/15 rounded px-3 py-2 text-sm"
@@ -273,7 +275,7 @@ export default function PatientDetail() {
               </button>
 
               <textarea
-                placeholder="ஆலோசனை · Advice (diet, rest, etc.)"
+                placeholder="Advice (diet, rest, etc.)"
                 value={advice}
                 onChange={(e) => setAdvice(e.target.value)}
                 className="w-full border border-ink/15 rounded px-3 py-2 text-sm mt-2"
@@ -305,15 +307,15 @@ export default function PatientDetail() {
 
             {savedVisit && !savedBill && (
               <form onSubmit={handleSaveBilling} className="border-t border-ink/10 pt-4 space-y-2">
-                <span className="text-sm font-medium text-ink">பில்லிங் · Billing for this visit</span>
+                <span className="text-sm font-medium text-ink">இந்த வருகைக்கான கட்டணம் · Billing for this visit</span>
                 <div className="grid grid-cols-3 gap-2">
-                  <input placeholder="Consultation Fee" type="number" value={billing.consultation_fee}
+                  <input placeholder="ஆலோசனை கட்டணம் · Fee" type="number" value={billing.consultation_fee}
                     onChange={(e) => setBilling({ ...billing, consultation_fee: e.target.value })}
                     className="border border-ink/15 rounded px-2 py-1.5 text-sm" />
-                  <input placeholder="Other Charges" type="number" value={billing.other_charges}
+                  <input placeholder="மற்ற கட்டணம் · Other" type="number" value={billing.other_charges}
                     onChange={(e) => setBilling({ ...billing, other_charges: e.target.value })}
                     className="border border-ink/15 rounded px-2 py-1.5 text-sm" />
-                  <input placeholder="Discount" type="number" value={billing.discount}
+                  <input placeholder="தள்ளுபடி · Discount" type="number" value={billing.discount}
                     onChange={(e) => setBilling({ ...billing, discount: e.target.value })}
                     className="border border-ink/15 rounded px-2 py-1.5 text-sm" />
                 </div>
@@ -324,17 +326,17 @@ export default function PatientDetail() {
                   <option value="card">Card</option>
                 </select>
                 <button className="w-full bg-brass text-ink rounded py-2 text-sm font-medium hover:bg-brass-deep hover:text-cream">
-                  பில் சேமி · Save Bill
+                  கட்டணம் சேமி · Save Bill
                 </button>
               </form>
             )}
             {savedBill && (
               <div className="flex items-center justify-between">
-                <p className="text-sm text-sage">பில் பதிவு செய்யப்பட்டது ✓ (Invoice #{savedBill.invoice_number})</p>
+                <p className="text-sm text-sage">கட்டணம் பதிவு செய்யப்பட்டது ✓ (ரசீது #{savedBill.invoice_number})</p>
                 <a href={`${import.meta.env.VITE_API_BASE_URL}/api/billing/${savedBill.id}/pdf`}
                   target="_blank" rel="noreferrer"
                   className="text-xs text-brass-deep hover:text-ink underline underline-offset-2">
-                  Invoice PDF
+                  ரசீது PDF
                 </a>
               </div>
             )}
