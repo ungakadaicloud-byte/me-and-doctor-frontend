@@ -13,6 +13,10 @@ import Billing from './pages/Billing';
 import Settings from './pages/Settings';
 import Reports from './pages/Reports';
 
+// Separated from App() because useAndroidBackButton needs
+// react-router's navigate/location, which only exist inside
+// <BrowserRouter> — App() itself renders the router, so it can't
+// call the hook directly.
 function AppRoutes() {
   useAndroidBackButton();
 
