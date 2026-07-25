@@ -24,7 +24,7 @@ export default function Settings() {
 
   return (
     <div>
-      <Header title="கிளினிக் அமைப்புகள்" subtitle="Clinic Settings" />
+      <Header title="கிளினிக் அமைப்புகள்" subtitle="Settings" />
 
       <div className="px-8 py-6">
         <form onSubmit={handleSave} className="chit px-6 py-6 max-w-lg space-y-4">
@@ -55,7 +55,7 @@ export default function Settings() {
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="text-xs text-ink-soft">Phone</label>
+              <label className="text-xs text-ink-soft">தொலைபேசி எண் · Phone</label>
               <input value={form.phone || ''} onChange={(e) => setForm({ ...form, phone: e.target.value })}
                 className="mt-1 w-full border border-ink/15 rounded px-3 py-2" />
             </div>
@@ -72,7 +72,7 @@ export default function Settings() {
               className="mt-1 w-full border border-ink/15 rounded px-3 py-2" />
           </div>
           <div>
-            <label className="text-xs text-ink-soft">லோகோ URL · Logo URL</label>
+            <label className="text-xs text-ink-soft">லோகோ இணைப்பு · Logo URL</label>
             <input value={form.logo_url || ''} onChange={(e) => setForm({ ...form, logo_url: e.target.value })}
               className="mt-1 w-full border border-ink/15 rounded px-3 py-2" />
           </div>
