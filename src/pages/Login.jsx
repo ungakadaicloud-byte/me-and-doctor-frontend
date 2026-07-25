@@ -18,7 +18,7 @@ export default function Login() {
       setSent(true);
     } catch (err) {
       console.error('sendMagicLink failed:', err);
-      setError('Link அனுப்ப முடியவில்லை. மீண்டும் முயற்சிக்கவும்.');
+      setError('இணைப்பை அனுப்ப முடியவில்லை. மீண்டும் முயற்சிக்கவும்.');
     } finally {
       setBusy(false);
     }
@@ -36,20 +36,20 @@ export default function Login() {
         {sent ? (
           <div className="text-center space-y-2">
             <p className="text-sm text-ink">
-              <span className="font-tamil">{email}</span> க்கு login link அனுப்பப்பட்டது.
+              <span className="font-tamil">{email}</span> க்கு உள்நுழை இணைப்பு அனுப்பப்பட்டது.
             </p>
-            <p className="text-xs text-ink-soft">Email-ஐ திறந்து link-ஐ click பண்ணுங்கள் · Check your email and click the link to log in.</p>
+            <p className="text-xs text-ink-soft">மின்னஞ்சலைத் திறந்து இணைப்பைத் தொடவும் · Check your email and click the link to log in.</p>
             <button
               onClick={() => setSent(false)}
               className="text-xs text-brass-deep underline underline-offset-2 mt-4"
             >
-              வேறு email-ஐ பயன்படுத்த · Use a different email
+              வேறு மின்னஞ்சலைப் பயன்படுத்த · Use a different email
             </button>
           </div>
         ) : (
           <form onSubmit={handleSend} className="space-y-4">
             <div>
-              <label className="text-xs text-ink-soft font-tamil">Email முகவரி · Email address</label>
+              <label className="text-xs text-ink-soft font-tamil">மின்னஞ்சல் முகவரி · Email address</label>
               <input
                 type="email"
                 required
@@ -64,13 +64,13 @@ export default function Login() {
               disabled={busy || !email}
               className="w-full bg-ink text-cream rounded py-2.5 font-medium hover:bg-ink-soft disabled:opacity-50"
             >
-              Login Link அனுப்பு · Send Login Link
+              உள்நுழை இணைப்பு அனுப்பு · Send Login Link
             </button>
           </form>
         )}
 
         <p className="text-center text-xs text-ink-soft mt-6">
-          புதிய கிளினிக்-ஆ? Email-ஐ மேலே type பண்ணுங்க, மீதி நாங்க பார்த்துக்குறோம் · New clinic? Just enter your email above — we'll set you up after you click the link.
+          புதிய கிளினிக்-ஆ? மின்னஞ்சலை மேலே பதிவு செய்யுங்க, மீதி நாங்க பார்த்துக்குறோம் · New clinic? Just enter your email above — we'll set you up after you click the link.
         </p>
       </div>
     </div>
