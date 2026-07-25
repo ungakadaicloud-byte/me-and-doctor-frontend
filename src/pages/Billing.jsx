@@ -8,7 +8,7 @@ export default function Billing() {
 
   return (
     <div>
-      <Header title="வரவு" subtitle="Billing Summary" />
+      <Header title="வரவு" subtitle="Billing" />
 
       <div className="px-8 py-6">
         <div className="flex gap-2 mb-6">
@@ -28,11 +28,14 @@ export default function Billing() {
           ))}
         </div>
 
+        {/* Summary stat — colorful card, consistent with Dashboard's
+            stat-card treatment. List rows below stay white/"chit" since
+            they're scannable records, not headline numbers. */}
         {summary && (
-          <div className="chit px-8 py-8 max-w-sm mb-8">
-            <div className="text-xs text-ink-soft uppercase tracking-wide">Total Collection</div>
-            <div className="token-number text-4xl text-ink mt-1">₹{summary.total.toLocaleString('en-IN')}</div>
-            <div className="text-xs text-brass-deep mt-2">{summary.count} visits billed</div>
+          <div className="bg-ink rounded-xl px-6 py-6 max-w-sm mb-8">
+            <div className="text-brass text-[10px] sm:text-xs uppercase tracking-wider font-semibold">மொத்த வரவு · Total Collection</div>
+            <div className="font-display font-semibold text-3xl sm:text-4xl text-white mt-1.5">₹{summary.total.toLocaleString('en-IN')}</div>
+            <div className="text-brass/80 text-xs sm:text-sm mt-2">{summary.count} வருகைகள் கட்டணம் பெறப்பட்டது</div>
           </div>
         )}
 
@@ -49,20 +52,20 @@ export default function Billing() {
                         target="_blank" rel="noreferrer"
                         className="text-xs text-brass-deep hover:text-ink underline underline-offset-2"
                       >
-                        Invoice #{row.invoice_number}
+                        ரசீது #{row.invoice_number}
                       </a>
                     ) : (
-                      <div className="text-xs text-brass-deep">Invoice #{row.invoice_number}</div>
+                      <div className="text-xs text-brass-deep">ரசீது #{row.invoice_number}</div>
                     )
                   )}
                 </div>
                 <div className="flex items-center gap-4">
                   <span className={`text-xs uppercase font-medium ${row.payment_status === 'paid' ? 'text-sage' : 'text-clay'}`}>
-                    {row.payment_status}
+                    {row.payment_status === 'paid' ? 'செலுத்தப்பட்டது' : 'நிலுவையில்'}
                   </span>
                   {row.payment_status === 'pending' && row.id && (
                     <button onClick={() => markPaid(row.id)} className="text-xs text-brass-deep hover:text-ink underline underline-offset-2">
-                      Mark Paid
+                      செலுத்தப்பட்டதாக் குறி · Mark Paid
                     </button>
                   )}
                   <span className="text-xs uppercase text-brass-deep">{row.payment_mode}</span>
@@ -71,7 +74,7 @@ export default function Billing() {
               </div>
               {row.consultation_fee != null && (
                 <div className="mt-1 text-[11px] text-ink-soft">
-                  Consultation ₹{row.consultation_fee} + Other ₹{row.other_charges || 0} − Discount ₹{row.discount || 0}
+                  ஆலோசனை ₹{row.consultation_fee} + மற்றவை ₹{row.other_charges || 0} − தள்ளுபடி ₹{row.discount || 0}
                 </div>
               )}
             </div>
