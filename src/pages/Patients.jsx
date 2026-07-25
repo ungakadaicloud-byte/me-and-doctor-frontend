@@ -38,9 +38,9 @@ export default function Patients() {
           <input
             value={tokenQuery}
             onChange={(e) => { setTokenQuery(e.target.value); setQuery(''); }}
-            placeholder="Token #"
+            placeholder="வரிசை எண் · Token #"
             type="number"
-            className="border border-ink/15 rounded px-3 py-2 w-28 bg-white"
+            className="border border-ink/15 rounded px-3 py-2 w-32 bg-white"
           />
           <button
             onClick={() => setShowForm((s) => !s)}
@@ -55,29 +55,29 @@ export default function Patients() {
             <input required placeholder="பெயர் · Full Name" value={form.name}
               onChange={(e) => setForm({ ...form, name: e.target.value })}
               className="border border-ink/15 rounded px-3 py-2 col-span-2" />
-            <input placeholder="Mobile Number" value={form.phone}
+            <input placeholder="மொபைல் எண் · Mobile Number" value={form.phone}
               onChange={(e) => setForm({ ...form, phone: e.target.value })}
               className="border border-ink/15 rounded px-3 py-2" />
             <select value={form.gender} onChange={(e) => setForm({ ...form, gender: e.target.value })}
               className="border border-ink/15 rounded px-3 py-2 bg-white">
-              <option value="">Gender</option>
+              <option value="">பாலினம் · Gender</option>
               <option value="male">ஆண் · Male</option>
               <option value="female">பெண் · Female</option>
               <option value="other">மற்றவை · Other</option>
             </select>
             <div>
-              <label className="text-xs text-ink-soft">Date of Birth</label>
+              <label className="text-xs text-ink-soft">பிறந்த தேதி · Date of Birth</label>
               <input type="date" value={form.date_of_birth}
                 onChange={(e) => setForm({ ...form, date_of_birth: e.target.value })}
                 className="mt-1 w-full border border-ink/15 rounded px-3 py-2" />
             </div>
-            <input placeholder="Age (if DOB unknown)" type="number" value={form.age}
+            <input placeholder="வயது (பிறந்த தேதி இல்லையெனில்) · Age" type="number" value={form.age}
               onChange={(e) => setForm({ ...form, age: e.target.value })}
               className="border border-ink/15 rounded px-3 py-2" />
-            <input placeholder="Blood group" value={form.blood_group}
+            <input placeholder="இரத்த வகை · Blood group" value={form.blood_group}
               onChange={(e) => setForm({ ...form, blood_group: e.target.value })}
               className="border border-ink/15 rounded px-3 py-2" />
-            <input placeholder="Emergency Contact" value={form.emergency_contact}
+            <input placeholder="அவசர தொடர்பு எண் · Emergency Contact" value={form.emergency_contact}
               onChange={(e) => setForm({ ...form, emergency_contact: e.target.value })}
               className="border border-ink/15 rounded px-3 py-2" />
             <input placeholder="முகவரி · Address" value={form.address}
