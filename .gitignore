@@ -2,9 +2,6 @@ node_modules/
 dist/
 .env
 
-# Android (Capacitor) — the android/ project itself IS committed
-# (this is Capacitor's own recommendation, since it holds manifest/
-# gradle config you may hand-edit), only build output is ignored.
 android/app/build/
 android/.gradle/
 android/local.properties
