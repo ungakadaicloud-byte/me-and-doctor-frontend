@@ -3,23 +3,56 @@ import { Link } from 'react-router-dom';
 import Header from '../components/Header';
 import { usePatients } from '../hooks/useClinicData';
 
+const BLOOD_GROUPS = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'];
+
+// DD/MM/YYYY -> ISO (YYYY-MM-DD) for the backend; returns null if the
+// text isn't a complete, valid date yet (so partial typing doesn't error).
+function parseDMY(text) {
+  const match = text.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+  if (!match) return null;
+  const [, d, m, y] = match;
+  const day = d.padStart(2, '0');
+  const month = m.padStart(2, '0');
+  return `${y}-${month}-${day}`;
+}
+
 export default function Patients() {
   const [query, setQuery] = useState('');
   const [tokenQuery, setTokenQuery] = useState('');
   const { patients, addPatient } = usePatients(tokenQuery ? { token: tokenQuery } : query);
   const [showForm, setShowForm] = useState(false);
+  const [dobText, setDobText] = useState('');
   const [form, setForm] = useState({
     name: '', phone: '', age: '', gender: '', date_of_birth: '', address: '',
     blood_group: '', allergies: '', chronic_conditions: '', emergency_contact: '', notes: '',
   });
 
-  const handleAdd = async (e) => {
-    e.preventDefault();
-    await addPatient(form);
+  const handlePhoneChange = (e) => setForm({ ...form, phone: e.target.value.replace(/\D/g, '').slice(0, 10) });
+  const handleEmergencyChange = (e) => setForm({ ...form, emergency_contact: e.target.value.replace(/\D/g, '').slice(0, 10) });
+
+  const handleDobChange = (e) => {
+    // Auto-inserts the "/" separators as the doctor types digits, so
+    // they only ever type numbers (DDMMYYYY) — no manual "/" needed.
+    const digits = e.target.value.replace(/\D/g, '').slice(0, 8);
+    let formatted = digits;
+    if (digits.length > 4) formatted = `${digits.slice(0, 2)}/${digits.slice(2, 4)}/${digits.slice(4)}`;
+    else if (digits.length > 2) formatted = `${digits.slice(0, 2)}/${digits.slice(2)}`;
+    setDobText(formatted);
+    setForm({ ...form, date_of_birth: parseDMY(formatted) || '' });
+  };
+
+  const resetForm = () => {
     setForm({
       name: '', phone: '', age: '', gender: '', date_of_birth: '', address: '',
       blood_group: '', allergies: '', chronic_conditions: '', emergency_contact: '', notes: '',
     });
+    setDobText('');
+  };
+
+  const handleAdd = async (e) => {
+    e.preventDefault();
+    await addPatient(form);
+    resetForm();
     setShowForm(false);
   };
 
@@ -29,12 +62,19 @@ export default function Patients() {
 
       <div className="px-8 py-6">
         <div className="flex flex-wrap gap-3 mb-6">
-          <input
-            value={query}
-            onChange={(e) => { setQuery(e.target.value); setTokenQuery(''); }}
-            placeholder="பெயர் அல்லது எண் தேடுங்கள் · Search name or phone"
-            className="border border-ink/15 rounded px-3 py-2 flex-1 max-w-sm bg-white"
-          />
+          {/* Search icon inside the input, like a normal search bar */}
+          <div className="relative flex-1 max-w-sm">
+            <svg className="absolute left-3 top-1/2 -translate-y-1/2 text-ink-soft" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <circle cx="11" cy="11" r="7" />
+              <line x1="21" y1="21" x2="16.65" y2="16.65" />
+            </svg>
+            <input
+              value={query}
+              onChange={(e) => { setQuery(e.target.value); setTokenQuery(''); }}
+              placeholder="பெயர் அல்லது எண் தேடுங்கள் · Search name or phone"
+              className="border border-ink/15 rounded pl-9 pr-3 py-2 w-full bg-white"
+            />
+          </div>
           <input
             value={tokenQuery}
             onChange={(e) => { setTokenQuery(e.target.value); setQuery(''); }}
@@ -55,8 +95,8 @@ export default function Patients() {
             <input required placeholder="பெயர் · Full Name" value={form.name}
               onChange={(e) => setForm({ ...form, name: e.target.value })}
               className="border border-ink/15 rounded px-3 py-2 col-span-2" />
-            <input placeholder="மொபைல் எண் · Mobile Number" value={form.phone}
-              onChange={(e) => setForm({ ...form, phone: e.target.value })}
+            <input placeholder="மொபைல் எண் · Mobile" type="tel" inputMode="numeric" maxLength={10}
+              value={form.phone} onChange={handlePhoneChange}
               className="border border-ink/15 rounded px-3 py-2" />
             <select value={form.gender} onChange={(e) => setForm({ ...form, gender: e.target.value })}
               className="border border-ink/15 rounded px-3 py-2 bg-white">
@@ -66,19 +106,22 @@ export default function Patients() {
               <option value="other">மற்றவை · Other</option>
             </select>
             <div>
-              <label className="text-xs text-ink-soft">பிறந்த தேதி · Date of Birth</label>
-              <input type="date" value={form.date_of_birth}
-                onChange={(e) => setForm({ ...form, date_of_birth: e.target.value })}
+              <label className="text-xs text-ink-soft">பிறந்த தேதி · DOB (DD/MM/YYYY)</label>
+              <input
+                type="text" inputMode="numeric" placeholder="23/05/1980" value={dobText}
+                onChange={handleDobChange} maxLength={10}
                 className="mt-1 w-full border border-ink/15 rounded px-3 py-2" />
             </div>
-            <input placeholder="வயது (பிறந்த தேதி இல்லையெனில்) · Age" type="number" value={form.age}
+            <input placeholder="வயது · Age" type="number" value={form.age}
               onChange={(e) => setForm({ ...form, age: e.target.value })}
               className="border border-ink/15 rounded px-3 py-2" />
-            <input placeholder="இரத்த வகை · Blood group" value={form.blood_group}
-              onChange={(e) => setForm({ ...form, blood_group: e.target.value })}
-              className="border border-ink/15 rounded px-3 py-2" />
-            <input placeholder="அவசர தொடர்பு எண் · Emergency Contact" value={form.emergency_contact}
-              onChange={(e) => setForm({ ...form, emergency_contact: e.target.value })}
+            <select value={form.blood_group} onChange={(e) => setForm({ ...form, blood_group: e.target.value })}
+              className="border border-ink/15 rounded px-3 py-2 bg-white">
+              <option value="">இரத்த வகை · Blood group</option>
+              {BLOOD_GROUPS.map((bg) => <option key={bg} value={bg}>{bg}</option>)}
+            </select>
+            <input placeholder="அவசர தொடர்பு · Emergency" type="tel" inputMode="numeric" maxLength={10}
+              value={form.emergency_contact} onChange={handleEmergencyChange}
               className="border border-ink/15 rounded px-3 py-2" />
             <input placeholder="முகவரி · Address" value={form.address}
               onChange={(e) => setForm({ ...form, address: e.target.value })}
