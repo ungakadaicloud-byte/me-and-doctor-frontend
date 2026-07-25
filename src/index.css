@@ -7,9 +7,6 @@ html, body {
   color: #16233D;
 }
 
-/* Signature element: every card in this app reads as a clinic paper
-   artifact — a token chit, a prescription slip, a receipt — with a
-   torn/perforated bottom edge instead of a plain rounded rectangle. */
 .chit {
   position: relative;
   background: #fff;
