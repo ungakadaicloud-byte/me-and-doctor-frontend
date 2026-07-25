@@ -1,19 +1,29 @@
 import { useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useLocation } from 'react-router-dom';
 import Header from '../components/Header';
 import { usePatientDetail, useVisits, usePrescriptions, useBilling } from '../hooks/useClinicData';
+import api from '../lib/api';
 
 const VISIT_STATUS_LABEL = { completed: 'முடிந்தது · Completed', cancelled: 'ரத்து · Cancelled' };
 
 export default function PatientDetail() {
   const { id } = useParams();
+  const location = useLocation();
   const { patient, reload } = usePatientDetail(id);
   const { addVisit, updateVisitStatus } = useVisits(id);
   const { lastRx, createPrescription, sharePrescription } = usePrescriptions(id);
   const { recordPayment } = useBilling();
 
   const [chiefComplaint, setChiefComplaint] = useState('');
-  const [vitals, setVitals] = useState({ bp: '', sugar: '', weight: '' });
+  const [vitals, setVitals] = useState(() => {
+    // Auto-fills from whatever the assistant/nurse already captured in
+    // the queue while this patient was waiting — the doctor shouldn't
+    // have to re-type BP/Sugar/Weight that's already on file.
+    const queueVitals = location.state?.vitals;
+    return (queueVitals && Object.keys(queueVitals).length > 0)
+      ? queueVitals
+      : { bp: '', sugar: '', weight: '' };
+  });
   const [notes, setNotes] = useState('');
   const [diagnosis, setDiagnosis] = useState('');
   const [labTests, setLabTests] = useState('');
@@ -26,6 +36,22 @@ export default function PatientDetail() {
 
   const [billing, setBilling] = useState({ consultation_fee: '', other_charges: '', discount: '', payment_mode: 'cash' });
   const [savedBill, setSavedBill] = useState(null);
+
+  const [showReferral, setShowReferral] = useState(false);
+  const [referral, setReferral] = useState({ referred_to: '', specialty: '', reason: '' });
+  const [referralBusy, setReferralBusy] = useState(false);
+
+  const handleGenerateReferral = async (e) => {
+    e.preventDefault();
+    setReferralBusy(true);
+    try {
+      const res = await api.post('/api/referral/pdf', { patient_id: id, ...referral }, { responseType: 'blob' });
+      const blobUrl = URL.createObjectURL(new Blob([res.data], { type: 'application/pdf' }));
+      window.open(blobUrl, '_blank');
+    } finally {
+      setReferralBusy(false);
+    }
+  };
 
   const updateMedicine = (i, field, value) => {
     setMedicines((prev) => prev.map((m, idx) => (idx === i ? { ...m, [field]: value } : m)));
@@ -339,6 +365,39 @@ export default function PatientDetail() {
                   ரசீது PDF
                 </a>
               </div>
+            )}
+          </div>
+
+          {/* Referral Letter — generated on demand, not saved anywhere;
+              the visit record already holds the diagnosis, so this is
+              just a printable letterhead for the specialist. */}
+          <div className="chit px-5 py-4 mt-4">
+            <button
+              onClick={() => setShowReferral((s) => !s)}
+              type="button"
+              className="text-sm font-medium text-ink hover:text-brass-deep"
+            >
+              {showReferral ? '− ' : '+ '}Referral Letter
+            </button>
+
+            {showReferral && (
+              <form onSubmit={handleGenerateReferral} className="mt-3 space-y-2">
+                <input required placeholder="Referred To (Doctor/Hospital name)" value={referral.referred_to}
+                  onChange={(e) => setReferral({ ...referral, referred_to: e.target.value })}
+                  className="w-full border border-ink/15 rounded px-3 py-2 text-sm" />
+                <input placeholder="Specialty (optional)" value={referral.specialty}
+                  onChange={(e) => setReferral({ ...referral, specialty: e.target.value })}
+                  className="w-full border border-ink/15 rounded px-3 py-2 text-sm" />
+                <textarea placeholder="Reason for referral (optional)" value={referral.reason}
+                  onChange={(e) => setReferral({ ...referral, reason: e.target.value })}
+                  className="w-full border border-ink/15 rounded px-3 py-2 text-sm" rows={2} />
+                <button
+                  disabled={referralBusy}
+                  className="w-full bg-ink text-cream rounded py-2 text-sm font-medium hover:bg-ink-soft disabled:opacity-50"
+                >
+                  {referralBusy ? 'உருவாக்குகிறது...' : 'Generate Referral PDF'}
+                </button>
+              </form>
             )}
           </div>
         </div>
