@@ -18,7 +18,7 @@ export default function AuthCallback() {
 
     if (!session) {
       // Link expired, already used, or something went wrong.
-      setError('Login link வேலை செய்யவில்லை. மீண்டும் முயற்சிக்கவும்.');
+      setError('உள்நுழை இணைப்பு வேலை செய்யவில்லை. மீண்டும் முயற்சிக்கவும்.');
       return;
     }
 
@@ -60,7 +60,7 @@ export default function AuthCallback() {
         {error ? (
           <>
             <p className="text-clay text-sm mb-4">{error}</p>
-            <a href="/login" className="text-xs text-brass-deep underline underline-offset-2">Login-க்குத் திரும்பு · Back to Login</a>
+            <a href="/login" className="text-xs text-brass-deep underline underline-offset-2">உள்நுழைவுக்குத் திரும்பு · Back to Login</a>
           </>
         ) : (
           <p className="text-sm text-ink-soft">
