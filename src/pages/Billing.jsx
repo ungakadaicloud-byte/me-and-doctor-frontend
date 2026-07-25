@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import Header from '../components/Header';
+import EmptyCard from '../components/EmptyCard';
 import { useBilling } from '../hooks/useClinicData';
 
 export default function Billing() {
@@ -19,7 +20,7 @@ export default function Billing() {
             <button
               key={r.key}
               onClick={() => setRange(r.key)}
-              className={`px-4 py-1.5 rounded text-sm font-medium ${
+              className={`px-4 py-2 rounded text-sm font-medium whitespace-nowrap ${
                 range === r.key ? 'bg-ink text-cream' : 'bg-parchment text-ink-soft'
               }`}
             >
@@ -28,15 +29,17 @@ export default function Billing() {
           ))}
         </div>
 
-        {/* Summary stat — colorful card, consistent with Dashboard's
-            stat-card treatment. List rows below stay white/"chit" since
-            they're scannable records, not headline numbers. */}
-        {summary && (
+        {summary && summary.count > 0 ? (
           <div className="bg-ink rounded-xl px-6 py-6 max-w-sm mb-8">
             <div className="text-brass text-[10px] sm:text-xs uppercase tracking-wider font-semibold">மொத்த வரவு · Total Collection</div>
-            <div className="font-display font-semibold text-3xl sm:text-4xl text-white mt-1.5">₹{summary.total.toLocaleString('en-IN')}</div>
+            <div className="flex items-baseline gap-1 mt-1.5">
+              <span className="text-brass font-display text-2xl sm:text-3xl">₹</span>
+              <span className="font-display font-semibold text-3xl sm:text-4xl text-white">{summary.total.toLocaleString('en-IN')}</span>
+            </div>
             <div className="text-brass/80 text-xs sm:text-sm mt-2">{summary.count} வருகைகள் கட்டணம் பெறப்பட்டது</div>
           </div>
+        ) : (
+          <EmptyCard label="இன்னும் வரவு இல்லை · No collection yet" showRupee className="max-w-sm mb-8" />
         )}
 
         <div className="space-y-2">
