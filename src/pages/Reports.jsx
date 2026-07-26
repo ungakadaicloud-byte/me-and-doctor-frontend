@@ -4,15 +4,37 @@ import Header from '../components/Header';
 import EmptyCard from '../components/EmptyCard';
 import { useReports, useDailyRegister } from '../hooks/useClinicData';
 
-const RANGE_OPTIONS = [
-  { days: 7, label: '7 நாட்கள்' },
-  { days: 30, label: '30 நாட்கள்' },
-  { days: 90, label: '90 நாட்கள்' },
-];
+const RANGE_OPTIONS = [{ days: 7 }, { days: 30 }, { days: 90 }];
 
 // Opens a clean, print-only tab with today's register — a digital
 // stand-in for the paper register book, built from data already
 // on the page (no separate PDF library needed for this one).
+// Downloads the register as a CSV the doctor can keep on their phone or
+// computer, or forward to someone — printing alone assumes a printer is
+// at hand and leaves nothing saved.
+function downloadRegister(rows) {
+  const header = ['Token', 'Patient', 'Phone', 'Diagnosis', 'Amount', 'Payment'];
+  const escape = (v) => `"${String(v ?? '').replace(/"/g, '""')}"`;
+  const lines = [
+    header.map(escape).join(','),
+    ...rows.map((r) => [
+      r.token_number, r.patient_name, r.phone || '', r.diagnosis || '',
+      r.amount != null ? r.amount : '', r.payment_status || '',
+    ].map(escape).join(',')),
+  ];
+
+  const stamp = new Date().toISOString().slice(0, 10);
+  const blob = new Blob(['\ufeff' + lines.join('\n')], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `me-and-doctor-register-${stamp}.csv`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
 function printRegister(rows) {
   const win = window.open('', '_blank');
   const bodyRows = rows.map((r) => `
@@ -56,6 +78,7 @@ export default function Reports() {
   const { daily, pending } = useReports(days);
   const { fetchRegister } = useDailyRegister();
   const [printing, setPrinting] = useState(false);
+  const [downloading, setDownloading] = useState(false);
 
   const handlePrintRegister = async () => {
     setPrinting(true);
@@ -67,6 +90,16 @@ export default function Reports() {
     }
   };
 
+  const handleDownloadRegister = async () => {
+    setDownloading(true);
+    try {
+      const rows = await fetchRegister();
+      downloadRegister(rows || []);
+    } finally {
+      setDownloading(false);
+    }
+  };
+
   const totalCollection = daily.reduce((sum, d) => sum + d.collection, 0);
   const totalPatients = daily.reduce((sum, d) => sum + d.patients, 0);
 
@@ -75,24 +108,36 @@ export default function Reports() {
       <Header title="அறிக்கைகள்" subtitle="Reports" />
 
       <div className="px-8 py-6">
-        <button
-          onClick={handlePrintRegister}
-          disabled={printing}
-          className="mb-4 text-xs font-medium bg-brass text-ink rounded px-4 py-2 hover:bg-brass-deep hover:text-cream disabled:opacity-50"
-        >
-          {printing ? 'தயார் செய்கிறது...' : 'இன்றைய பதிவேடு அச்சிடு · Print Today\'s Register'}
-        </button>
+        <div className="grid grid-cols-2 gap-2 mb-4 max-w-md">
+          <button
+            onClick={handlePrintRegister}
+            disabled={printing}
+            className="text-xs font-medium bg-brass text-ink rounded-lg px-3 py-3 hover:bg-brass-deep hover:text-cream disabled:opacity-50 leading-tight"
+          >
+            {printing ? 'தயார் செய்கிறது...' : (<><div>இன்றைய பதிவேடு அச்சிடு</div><div className="text-[10px] opacity-75 mt-0.5">Print Register</div></>)}
+          </button>
+          <button
+            onClick={handleDownloadRegister}
+            disabled={downloading}
+            className="text-xs font-medium bg-ink text-cream rounded-lg px-3 py-3 hover:bg-ink-soft disabled:opacity-50 leading-tight"
+          >
+            {downloading ? 'தயார் செய்கிறது...' : (<><div>பதிவேடு பதிவிறக்கம்</div><div className="text-[10px] opacity-75 mt-0.5">Download CSV</div></>)}
+          </button>
+        </div>
 
-        <div className="flex gap-2 mb-4">
+        {/* Equal-width, two-line boxes so none of the three runs to the
+            screen edge or sits visually attached to the next one. */}
+        <div className="grid grid-cols-3 gap-2 mb-4 max-w-md">
           {RANGE_OPTIONS.map((r) => (
             <button
               key={r.days}
               onClick={() => setDays(r.days)}
-              className={`px-4 py-1.5 rounded text-sm font-medium whitespace-nowrap ${
+              className={`rounded-lg py-3 px-1 text-center leading-tight ${
                 days === r.days ? 'bg-ink text-cream' : 'bg-parchment text-ink-soft'
               }`}
             >
-              {r.label}
+              <div className="text-base font-semibold">{r.days}</div>
+              <div className="text-[11px] opacity-75 mt-0.5">நாட்கள் · days</div>
             </button>
           ))}
         </div>
