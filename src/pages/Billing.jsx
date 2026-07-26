@@ -12,7 +12,10 @@ export default function Billing() {
       <Header title="வரவு" subtitle="Billing" />
 
       <div className="px-8 py-6">
-        <div className="flex gap-2 mb-6">
+        {/* Two-line labels (Tamil above English) with equal widths and
+            real height, so each option reads as its own distinct box
+            instead of a long strip running to the screen edge. */}
+        <div className="grid grid-cols-2 gap-3 mb-6 max-w-sm">
           {[
             { key: 'day', ta: 'இன்று', en: 'Today' },
             { key: 'month', ta: 'இந்த மாதம்', en: 'This Month' },
@@ -20,11 +23,12 @@ export default function Billing() {
             <button
               key={r.key}
               onClick={() => setRange(r.key)}
-              className={`px-4 py-2 rounded text-sm font-medium whitespace-nowrap ${
+              className={`rounded-lg py-3 px-2 text-center leading-tight ${
                 range === r.key ? 'bg-ink text-cream' : 'bg-parchment text-ink-soft'
               }`}
             >
-              {r.ta} · {r.en}
+              <div className="text-sm font-medium">{r.ta}</div>
+              <div className="text-[11px] opacity-75 mt-0.5">{r.en}</div>
             </button>
           ))}
         </div>
