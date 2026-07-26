@@ -40,7 +40,15 @@ export function usePatients(query = '') {
     return data;
   }, []);
 
-  return { patients, loading, addPatient, reload };
+  // Corrects a patient's profile after it's been saved — a typo'd
+  // phone number or wrong blood group shouldn't be permanent.
+  const updatePatient = useCallback(async (patientId, patch) => {
+    const { data } = await api.patch(`/api/patients/${patientId}`, patch);
+    setPatients((prev) => prev.map((p) => (p.id === patientId ? data : p)));
+    return data;
+  }, []);
+
+  return { patients, loading, addPatient, updatePatient, reload };
 }
 
 export function usePatientDetail(patientId) {
@@ -57,7 +65,12 @@ export function usePatientDetail(patientId) {
 
   useEffect(() => { reload(); }, [reload]);
 
-  return { patient, loading, reload };
+  const updateProfile = useCallback(async (patch) => {
+    await api.patch(`/api/patients/${patientId}`, patch);
+    reload();
+  }, [patientId, reload]);
+
+  return { patient, loading, reload, updateProfile };
 }
 
 export function useVisits(patientId) {
@@ -71,7 +84,14 @@ export function useVisits(patientId) {
     return data;
   }, []);
 
-  return { addVisit, updateVisitStatus };
+  // Corrects any clinical field on a saved visit — diagnosis, notes,
+  // vitals, lab tests, follow-up date.
+  const updateVisit = useCallback(async (visitId, patch) => {
+    const { data } = await api.patch(`/api/visits/${visitId}`, patch);
+    return data;
+  }, []);
+
+  return { addVisit, updateVisitStatus, updateVisit };
 }
 
 export function usePrescriptions(patientId) {
@@ -103,7 +123,13 @@ export function usePrescriptions(patientId) {
     await api.post(`/api/prescriptions/${rxId}/share`);
   }, []);
 
-  return { lastRx, createPrescription, sharePrescription };
+  // Corrects a saved prescription's medicines/advice.
+  const updatePrescription = useCallback(async (rxId, patch) => {
+    const { data } = await api.patch(`/api/prescriptions/${rxId}`, patch);
+    return data;
+  }, []);
+
+  return { lastRx, createPrescription, sharePrescription, updatePrescription };
 }
 
 export function useQueue() {
@@ -171,7 +197,15 @@ export function useBilling(range = 'day') {
     reload();
   }, [reload]);
 
-  return { summary, loading, recordPayment, markPaid };
+  // Corrects a bill's fee breakdown after it's been saved — the backend
+  // recomputes the total from consultation_fee + other_charges - discount.
+  const updateBilling = useCallback(async (billingId, patch) => {
+    const { data } = await api.patch(`/api/billing/${billingId}`, patch);
+    reload();
+    return data;
+  }, [reload]);
+
+  return { summary, loading, recordPayment, markPaid, updateBilling };
 }
 
 export function useReports(days = 7) {
