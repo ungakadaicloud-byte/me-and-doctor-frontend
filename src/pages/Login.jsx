@@ -4,8 +4,13 @@ import { useAuth } from '../hooks/useAuth';
 import api from '../lib/api';
 import logo from '../assets/logo.png';
 
+// e.g. https://abcd1234.supabase.co -> abcd1234
+const projectRef = (import.meta.env.VITE_SUPABASE_URL || 'NOT SET')
+  .replace('https://', '')
+  .replace('.supabase.co', '');
+
 export default function Login() {
-  const { signIn, signUp } = useAuth();
+  const { signIn, signUp, sendPasswordReset } = useAuth();
   const navigate = useNavigate();
   const [mode, setMode] = useState('login'); // login | signup
   const [email, setEmail] = useState('');
@@ -40,11 +45,22 @@ export default function Login() {
           setError('கடவுச்சொல் குறைந்தது 6 எழுத்துகள் இருக்க வேண்டும்.');
           return;
         }
-        const newSession = await signUp(email, password);
-        // With "Confirm email" enabled in Supabase, signUp returns no
-        // session — the account exists but can't be used until the
-        // emailed link is clicked. Say so plainly instead of pushing
-        // the user into a protected route that will bounce them back.
+        const { session: newSession, alreadyRegistered } = await signUp(email, password);
+
+        // Supabase returns success with no error and sends no email when
+        // the address already has an account. Without calling that out,
+        // it looks identical to a successful signup that simply never
+        // arrived — which is exactly how this presented.
+        if (alreadyRegistered) {
+          setInfo('');
+          setError('இந்த மின்னஞ்சலுக்கு ஏற்கனவே கணக்கு உள்ளது. உள்நுழையுங்கள், அல்லது கீழே "கடவுச்சொல் மறந்துவிட்டதா?" தேர்ந்தெடுங்கள்.');
+          setMode('login');
+          setPassword('');
+          return;
+        }
+
+        // "Confirm email" enabled: the account is created but unusable
+        // until the emailed link is clicked.
         if (!newSession) {
           setError('');
           setInfo('கணக்கு உருவாக்கப்பட்டது. மின்னஞ்சலைத் திறந்து உறுதிசெய்து, பிறகு உள்நுழையுங்கள்.');
@@ -57,7 +73,15 @@ export default function Login() {
       }
       await routeAfterAuth();
     } catch (err) {
-      console.error(`${mode} failed:`, err);
+      // Full error surface: Supabase returns distinct code/status values
+      // that a bare message string throws away.
+      console.error(`${mode} failed`, {
+        name: err?.name,
+        code: err?.code,
+        status: err?.status,
+        message: err?.message,
+        raw: err,
+      });
       const msg = err?.message || '';
       if (/already registered|already exists/i.test(msg)) {
         setError('இந்த மின்னஞ்சல் ஏற்கனவே பதிவு செய்யப்பட்டுள்ளது. உள்நுழையுங்கள்.');
@@ -71,6 +95,20 @@ export default function Login() {
         // look identical and impossible to diagnose.
         setError(msg || 'முடியவில்லை. மீண்டும் முயற்சிக்கவும்.');
       }
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const handleReset = async () => {
+    if (!email) { setError('முதலில் மின்னஞ்சலை பதிவு செய்யுங்கள்.'); return; }
+    setError(''); setInfo(''); setBusy(true);
+    try {
+      await sendPasswordReset(email);
+      setInfo('கடவுச்சொல் மாற்ற இணைப்பு அனுப்பப்பட்டது. மின்னஞ்சலைப் பாருங்கள்.');
+    } catch (err) {
+      console.error('password reset failed:', err);
+      setError(err?.message || 'அனுப்ப முடியவில்லை.');
     } finally {
       setBusy(false);
     }
@@ -139,6 +177,26 @@ export default function Login() {
               : (mode === 'signup' ? 'கணக்கு உருவாக்கு · Create Account' : 'உள்நுழை · Log In')}
           </button>
         </form>
+
+        {mode === 'login' && (
+          <button
+            type="button"
+            onClick={handleReset}
+            disabled={busy}
+            className="w-full mt-3 text-xs text-brass-deep underline underline-offset-2 disabled:opacity-50"
+          >
+            கடவுச்சொல் மறந்துவிட்டதா? · Forgot password?
+          </button>
+        )}
+
+        {/* Diagnostic: shows which Supabase project this build actually
+            authenticates against. "Invalid login credentials" for a user
+            that provably exists means the app and the dashboard are
+            pointed at different projects — this makes that visible
+            instead of requiring guesswork. */}
+        <p className="text-center text-[10px] text-ink-soft/60 mt-4 break-all">
+          auth: {projectRef}
+        </p>
 
         <p className="text-center text-xs text-ink-soft mt-6">
           {mode === 'login'
