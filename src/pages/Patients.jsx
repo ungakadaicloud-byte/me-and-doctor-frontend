@@ -2,19 +2,9 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import Header from '../components/Header';
 import { usePatients } from '../hooks/useClinicData';
+import { formatDateInput, dmyToISO } from '../lib/clinical';
 
 const BLOOD_GROUPS = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'];
-
-// DD/MM/YYYY -> ISO (YYYY-MM-DD) for the backend; returns null if the
-// text isn't a complete, valid date yet (so partial typing doesn't error).
-function parseDMY(text) {
-  const match = text.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
-  if (!match) return null;
-  const [, d, m, y] = match;
-  const day = d.padStart(2, '0');
-  const month = m.padStart(2, '0');
-  return `${y}-${month}-${day}`;
-}
 
 export default function Patients() {
   const [query, setQuery] = useState('');
@@ -31,14 +21,11 @@ export default function Patients() {
   const handleEmergencyChange = (e) => setForm({ ...form, emergency_contact: e.target.value.replace(/\D/g, '').slice(0, 10) });
 
   const handleDobChange = (e) => {
-    // Auto-inserts the "/" separators as the doctor types digits, so
-    // they only ever type numbers (DDMMYYYY) — no manual "/" needed.
-    const digits = e.target.value.replace(/\D/g, '').slice(0, 8);
-    let formatted = digits;
-    if (digits.length > 4) formatted = `${digits.slice(0, 2)}/${digits.slice(2, 4)}/${digits.slice(4)}`;
-    else if (digits.length > 2) formatted = `${digits.slice(0, 2)}/${digits.slice(2)}`;
+    // Shared with the follow-up date field on the patient detail page,
+    // so every date in the app is entered the same way.
+    const formatted = formatDateInput(e.target.value);
     setDobText(formatted);
-    setForm({ ...form, date_of_birth: parseDMY(formatted) || '' });
+    setForm({ ...form, date_of_birth: dmyToISO(formatted) || '' });
   };
 
   const resetForm = () => {
