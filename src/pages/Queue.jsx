@@ -2,6 +2,9 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import Header from '../components/Header';
 import { useQueue, usePatients } from '../hooks/useClinicData';
+import {
+  SUGAR_TYPES, composeBP, parseBP, composeSugar, parseSugar, composeWeight, parseWeight,
+} from '../lib/clinical';
 
 const STATUS_LABEL = {
   waiting: { ta: 'காத்திருக்கிறார்', en: 'Waiting', color: 'text-brass-deep' },
@@ -12,30 +15,76 @@ const STATUS_LABEL = {
 
 const NEXT_STATUS = { waiting: 'in_consultation', in_consultation: 'completed' };
 
+// Vitals are captured as constrained numeric parts rather than free
+// text: BP as systolic/diastolic, sugar with its mandatory reading type
+// (a sugar value means nothing without knowing if it's fasting, PP or
+// random), weight in kg. Composed into the same strings the API stores.
 function VitalsQuickEntry({ token, onSave }) {
-  const [vitals, setVitals] = useState(token.vitals || {});
+  const initialBP = parseBP(token.vitals?.bp);
+  const initialSugar = parseSugar(token.vitals?.sugar);
+
+  const [systolic, setSystolic] = useState(initialBP.systolic);
+  const [diastolic, setDiastolic] = useState(initialBP.diastolic);
+  const [sugarValue, setSugarValue] = useState(initialSugar.value);
+  const [sugarType, setSugarType] = useState(initialSugar.type || 'Fasting');
+  const [weight, setWeight] = useState(parseWeight(token.vitals?.weight));
   const [saved, setSaved] = useState(false);
 
+  const num = (v, max) => v.replace(/\D/g, '').slice(0, max);
+
   const handleSave = async () => {
-    await onSave(token.id, vitals);
+    await onSave(token.id, {
+      bp: composeBP(systolic, diastolic),
+      sugar: composeSugar(sugarValue, sugarType),
+      weight: composeWeight(weight),
+    });
     setSaved(true);
     setTimeout(() => setSaved(false), 1500);
   };
 
   return (
-    <div className="mt-3 border-t border-ink/10 pt-3">
-      <div className="text-[10px] text-ink-soft uppercase tracking-wide mb-1.5">
+    <div className="mt-3 border-t border-ink/10 pt-3 space-y-2">
+      <div className="text-[10px] text-ink-soft uppercase tracking-wide">
         உதவியாளர் பதிவு · Assistant: Vitals
       </div>
-      <div className="grid grid-cols-3 gap-1.5">
-        <input placeholder="BP" value={vitals.bp || ''} onChange={(e) => setVitals({ ...vitals, bp: e.target.value })}
-          className="border border-ink/15 rounded px-2 py-1 text-xs" />
-        <input placeholder="Sugar" value={vitals.sugar || ''} onChange={(e) => setVitals({ ...vitals, sugar: e.target.value })}
-          className="border border-ink/15 rounded px-2 py-1 text-xs" />
-        <input placeholder="Weight" value={vitals.weight || ''} onChange={(e) => setVitals({ ...vitals, weight: e.target.value })}
-          className="border border-ink/15 rounded px-2 py-1 text-xs" />
+
+      <div>
+        <div className="text-[10px] text-ink-soft mb-1">ரத்த அழுத்தம் · BP (mmHg)</div>
+        <div className="flex items-center gap-1">
+          <input type="tel" inputMode="numeric" placeholder="130" value={systolic}
+            onChange={(e) => setSystolic(num(e.target.value, 3))}
+            className="border border-ink/15 rounded px-2 py-1 text-xs w-16 text-center" />
+          <span className="text-ink-soft">/</span>
+          <input type="tel" inputMode="numeric" placeholder="80" value={diastolic}
+            onChange={(e) => setDiastolic(num(e.target.value, 3))}
+            className="border border-ink/15 rounded px-2 py-1 text-xs w-16 text-center" />
+        </div>
       </div>
-      <button onClick={handleSave} className="mt-1.5 text-[11px] text-brass-deep hover:text-ink underline underline-offset-2">
+
+      <div>
+        <div className="text-[10px] text-ink-soft mb-1">சர்க்கரை · Sugar (mg/dL)</div>
+        <div className="flex items-center gap-1">
+          <input type="tel" inputMode="numeric" placeholder="110" value={sugarValue}
+            onChange={(e) => setSugarValue(num(e.target.value, 3))}
+            className="border border-ink/15 rounded px-2 py-1 text-xs w-16 text-center" />
+          <select value={sugarType} onChange={(e) => setSugarType(e.target.value)}
+            className="border border-ink/15 rounded px-1 py-1 text-xs bg-white">
+            {SUGAR_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
+          </select>
+        </div>
+      </div>
+
+      <div>
+        <div className="text-[10px] text-ink-soft mb-1">எடை · Weight</div>
+        <div className="flex items-center gap-1">
+          <input type="tel" inputMode="decimal" placeholder="68" value={weight}
+            onChange={(e) => setWeight(e.target.value.replace(/[^\d.]/g, '').slice(0, 5))}
+            className="border border-ink/15 rounded px-2 py-1 text-xs w-16 text-center" />
+          <span className="text-xs text-ink-soft">kg</span>
+        </div>
+      </div>
+
+      <button onClick={handleSave} className="text-[11px] text-brass-deep hover:text-ink underline underline-offset-2">
         {saved ? 'சேமிக்கப்பட்டது ✓' : 'Vitals சேமி · Save'}
       </button>
     </div>
