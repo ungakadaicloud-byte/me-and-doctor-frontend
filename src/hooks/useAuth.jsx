@@ -9,10 +9,6 @@ export function AuthProvider({ children }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Picks up an existing session on load, and also handles the
-    // magic-link redirect: supabase-js auto-parses the tokens from the
-    // URL (detectSessionInUrl defaults to true) and fires this listener
-    // once that's done.
     supabase.auth.getSession().then(({ data }) => {
       setSession(data.session);
       setLoading(false);
@@ -25,21 +21,29 @@ export function AuthProvider({ children }) {
     return () => listener.subscription.unsubscribe();
   }, []);
 
-  // Sends the magic link. `redirectTo` should point at /auth/callback
-  // so the app can decide whether to send the person to the dashboard
-  // or to onboarding, once the session is established.
-  const sendMagicLink = useCallback(async (email) => {
+  // Sends a 6-digit code to the doctor's email.
+  //
+  // This replaced magic links: a magic link can only complete in the
+  // same browser storage that requested it, and on a phone the link
+  // almost always opens somewhere else (Gmail's in-app browser, a
+  // fresh Chrome tab, a copied-and-pasted URL) — so the session could
+  // never be established. A typed code has no such dependency: it's
+  // entered in the same tab that asked for it.
+  const sendOtp = useCallback(async (email) => {
     const { error } = await supabase.auth.signInWithOtp({
       email,
-      options: { emailRedirectTo: `${window.location.origin}/auth/callback` },
+      options: { shouldCreateUser: true },
     });
     if (error) throw error;
   }, []);
 
-  // Doctor onboarding: session already exists at this point (person
-  // clicked the magic link) — this just creates the clinic/doctor rows
-  // via the backend, which reads the session from the Authorization
-  // header that api.js already attaches.
+  const verifyOtp = useCallback(async (email, token) => {
+    const { data, error } = await supabase.auth.verifyOtp({ email, token, type: 'email' });
+    if (error) throw error;
+    setSession(data.session);
+    return data.session;
+  }, []);
+
   const onboard = useCallback(async (details) => {
     const { data } = await api.post('/api/auth/onboard', details);
     return data;
@@ -51,7 +55,7 @@ export function AuthProvider({ children }) {
   }, []);
 
   return (
-    <AuthContext.Provider value={{ session, loading, sendMagicLink, onboard, logout }}>
+    <AuthContext.Provider value={{ session, loading, sendOtp, verifyOtp, onboard, logout }}>
       {children}
     </AuthContext.Provider>
   );
