@@ -46,14 +46,14 @@ export default function Dashboard() {
           )}
         </div>
 
-        <div className="grid grid-cols-3 gap-2 sm:gap-4 mb-4 sm:mb-6 max-w-3xl">
+        <div className="grid grid-cols-2 gap-3 sm:gap-4 mb-4 sm:mb-6 max-w-3xl">
           {cards.map((c) => (
-            <div key={c.sub} className={`${c.bg} rounded-xl px-3 py-3 sm:px-5 sm:py-5 flex flex-col justify-between min-h-[92px] sm:min-h-[120px]`}>
-              <div className="text-white/60 text-[10px] sm:text-xs uppercase tracking-wide font-medium leading-tight">{c.label}</div>
-              <div className="font-display font-semibold text-white text-xl sm:text-3xl leading-tight my-1">
+            <div key={c.sub} className={`${c.bg} rounded-xl px-4 py-4 sm:px-5 sm:py-5 flex flex-col justify-between min-h-[100px] sm:min-h-[130px]`}>
+              <div className="text-white/60 text-xs sm:text-sm uppercase tracking-wide font-medium leading-tight">{c.label}</div>
+              <div className="font-display font-semibold text-white text-2xl sm:text-4xl leading-tight my-1.5">
                 {c.value ?? (failed ? '—' : '…')}
               </div>
-              <div className="text-brass text-[10px] sm:text-[11px] font-medium leading-tight">{c.sub}</div>
+              <div className="text-brass text-xs sm:text-sm font-medium leading-tight">{c.sub}</div>
             </div>
           ))}
         </div>
