@@ -21,26 +21,26 @@ export function AuthProvider({ children }) {
     return () => listener.subscription.unsubscribe();
   }, []);
 
-  // Sends a 6-digit code to the doctor's email.
-  //
-  // This replaced magic links: a magic link can only complete in the
-  // same browser storage that requested it, and on a phone the link
-  // almost always opens somewhere else (Gmail's in-app browser, a
-  // fresh Chrome tab, a copied-and-pasted URL) — so the session could
-  // never be established. A typed code has no such dependency: it's
-  // entered in the same tab that asked for it.
-  const sendOtp = useCallback(async (email) => {
-    const { error } = await supabase.auth.signInWithOtp({
-      email,
-      options: { shouldCreateUser: true },
-    });
-    if (error) throw error;
-  }, []);
-
-  const verifyOtp = useCallback(async (email, token) => {
-    const { data, error } = await supabase.auth.verifyOtp({ email, token, type: 'email' });
+  // Email + password, deliberately chosen over magic links and emailed
+  // OTP codes. Both of those depend on email delivery, Supabase email
+  // templates, and (for magic links) the session completing in the very
+  // same browser storage that requested it — which on a phone it almost
+  // never does, because the link opens in Gmail's in-app browser or a
+  // fresh tab. Password auth needs none of that: it's a single API call
+  // that completes in the tab the doctor is already looking at.
+  const signIn = useCallback(async (email, password) => {
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
     if (error) throw error;
     setSession(data.session);
+    return data.session;
+  }, []);
+
+  const signUp = useCallback(async (email, password) => {
+    const { data, error } = await supabase.auth.signUp({ email, password });
+    if (error) throw error;
+    // With "Confirm email" disabled in Supabase, signUp returns a live
+    // session immediately and the doctor goes straight to onboarding.
+    if (data.session) setSession(data.session);
     return data.session;
   }, []);
 
@@ -55,7 +55,7 @@ export function AuthProvider({ children }) {
   }, []);
 
   return (
-    <AuthContext.Provider value={{ session, loading, sendOtp, verifyOtp, onboard, logout }}>
+    <AuthContext.Provider value={{ session, loading, signIn, signUp, onboard, logout }}>
       {children}
     </AuthContext.Provider>
   );
