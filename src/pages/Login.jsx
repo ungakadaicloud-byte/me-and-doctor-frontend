@@ -5,50 +5,54 @@ import api from '../lib/api';
 import logo from '../assets/logo.png';
 
 export default function Login() {
-  const { sendOtp, verifyOtp } = useAuth();
+  const { signIn, signUp } = useAuth();
   const navigate = useNavigate();
+  const [mode, setMode] = useState('login'); // login | signup
   const [email, setEmail] = useState('');
-  const [code, setCode] = useState('');
-  const [stage, setStage] = useState('email'); // email -> code
+  const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
 
-  const handleSend = async (e) => {
-    e.preventDefault();
-    setError('');
-    setBusy(true);
+  // After auth succeeds: existing doctor -> dashboard, brand-new
+  // account (no clinic row yet) -> onboarding.
+  const routeAfterAuth = async () => {
     try {
-      await sendOtp(email);
-      setStage('code');
+      await api.get('/api/clinic');
+      navigate('/');
     } catch (err) {
-      console.error('sendOtp failed:', err);
-      setError('குறியீட்டை அனுப்ப முடியவில்லை. மீண்டும் முயற்சிக்கவும்.');
-    } finally {
-      setBusy(false);
+      if (err.response?.status === 403 && err.response.data?.error === 'no_clinic_for_user') {
+        navigate('/onboarding');
+      } else {
+        navigate('/');
+      }
     }
   };
 
-  const handleVerify = async (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
     setBusy(true);
     try {
-      await verifyOtp(email, code);
-      // Existing doctor goes to the dashboard; a brand-new one has no
-      // clinic row yet and needs to finish onboarding first.
-      try {
-        await api.get('/api/clinic');
-        navigate('/');
-      } catch (err) {
-        if (err.response?.status === 403 && err.response.data?.error === 'no_clinic_for_user') {
-          navigate('/onboarding');
-        } else {
-          navigate('/');
+      if (mode === 'signup') {
+        if (password.length < 6) {
+          setError('கடவுச்சொல் குறைந்தது 6 எழுத்துகள் இருக்க வேண்டும்.');
+          return;
         }
+        await signUp(email, password);
+      } else {
+        await signIn(email, password);
       }
+      await routeAfterAuth();
     } catch (err) {
-      console.error('verifyOtp failed:', err);
-      setError('தவறான குறியீடு. மீண்டும் முயற்சிக்கவும்.');
+      console.error(`${mode} failed:`, err);
+      const msg = err?.message || '';
+      if (/already registered|already exists/i.test(msg)) {
+        setError('இந்த மின்னஞ்சல் ஏற்கனவே பதிவு செய்யப்பட்டுள்ளது. உள்நுழையுங்கள்.');
+      } else if (/invalid login credentials/i.test(msg)) {
+        setError('மின்னஞ்சல் அல்லது கடவுச்சொல் தவறு.');
+      } else {
+        setError('முடியவில்லை. மீண்டும் முயற்சிக்கவும்.');
+      }
     } finally {
       setBusy(false);
     }
@@ -63,65 +67,64 @@ export default function Login() {
           <div className="font-tamil text-sm text-brass-deep mt-1">Clinic OS</div>
         </div>
 
-        {stage === 'email' ? (
-          <form onSubmit={handleSend} className="space-y-4">
-            <div>
-              <label className="text-xs text-ink-soft font-tamil">மின்னஞ்சல் முகவரி · Email address</label>
-              <input
-                type="email"
-                required
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="doctor@clinic.com"
-                className="mt-1 w-full border border-ink/15 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brass"
-              />
-            </div>
-            {error && <p className="text-clay text-xs">{error}</p>}
-            <button
-              disabled={busy || !email}
-              className="w-full bg-ink text-cream rounded py-2.5 font-medium hover:bg-ink-soft disabled:opacity-50"
-            >
-              {busy ? 'அனுப்புகிறது...' : 'குறியீடு அனுப்பு · Send Code'}
-            </button>
-          </form>
-        ) : (
-          <form onSubmit={handleVerify} className="space-y-4">
-            <p className="text-xs text-ink-soft text-center">
-              <span className="font-medium text-ink">{email}</span> க்கு 6-இலக்க குறியீடு அனுப்பப்பட்டது.
-            </p>
-            <div>
-              <label className="text-xs text-ink-soft font-tamil">குறியீடு · Code</label>
-              <input
-                type="text"
-                inputMode="numeric"
-                required
-                maxLength={6}
-                value={code}
-                onChange={(e) => setCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
-                placeholder="______"
-                className="mt-1 w-full border border-ink/15 rounded px-3 py-2 tracking-[0.5em] text-center text-lg focus:outline-none focus:ring-2 focus:ring-brass"
-              />
-              <div className="text-[11px] text-ink-soft mt-1 text-center">{code.length}/6</div>
-            </div>
-            {error && <p className="text-clay text-xs">{error}</p>}
-            <button
-              disabled={busy || code.length !== 6}
-              className="w-full bg-ink text-cream rounded py-2.5 font-medium hover:bg-ink-soft disabled:opacity-50"
-            >
-              {busy ? 'சரிபார்க்கிறது...' : 'உள்நுழை · Log In'}
-            </button>
-            <button
-              type="button"
-              onClick={() => { setStage('email'); setCode(''); setError(''); }}
-              className="w-full text-xs text-brass-deep underline underline-offset-2"
-            >
-              வேறு மின்னஞ்சலைப் பயன்படுத்த · Use a different email
-            </button>
-          </form>
-        )}
+        <div className="flex mb-6 bg-parchment rounded p-1">
+          <button
+            type="button"
+            onClick={() => { setMode('login'); setError(''); }}
+            className={`flex-1 py-2 rounded text-sm font-medium ${mode === 'login' ? 'bg-white text-ink shadow-sm' : 'text-ink-soft'}`}
+          >
+            உள்நுழை · Log In
+          </button>
+          <button
+            type="button"
+            onClick={() => { setMode('signup'); setError(''); }}
+            className={`flex-1 py-2 rounded text-sm font-medium ${mode === 'signup' ? 'bg-white text-ink shadow-sm' : 'text-ink-soft'}`}
+          >
+            பதிவு · Sign Up
+          </button>
+        </div>
+
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <label className="text-xs text-ink-soft font-tamil">மின்னஞ்சல் · Email</label>
+            <input
+              type="email"
+              required
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="doctor@clinic.com"
+              className="mt-1 w-full border border-ink/15 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brass"
+            />
+          </div>
+          <div>
+            <label className="text-xs text-ink-soft font-tamil">கடவுச்சொல் · Password</label>
+            <input
+              type="password"
+              required
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="••••••"
+              className="mt-1 w-full border border-ink/15 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brass"
+            />
+            {mode === 'signup' && (
+              <div className="text-[11px] text-ink-soft mt-1">குறைந்தது 6 எழுத்துகள் · At least 6 characters</div>
+            )}
+          </div>
+          {error && <p className="text-clay text-xs">{error}</p>}
+          <button
+            disabled={busy || !email || !password}
+            className="w-full bg-ink text-cream rounded py-2.5 font-medium hover:bg-ink-soft disabled:opacity-50"
+          >
+            {busy
+              ? (mode === 'signup' ? 'பதிவு செய்கிறது...' : 'உள்நுழைகிறது...')
+              : (mode === 'signup' ? 'கணக்கு உருவாக்கு · Create Account' : 'உள்நுழை · Log In')}
+          </button>
+        </form>
 
         <p className="text-center text-xs text-ink-soft mt-6">
-          புதிய கிளினிக்-ஆ? மின்னஞ்சலை மேலே பதிவு செய்யுங்க, மீதி நாங்க பார்த்துக்குறோம் · New clinic? Just enter your email above.
+          {mode === 'login'
+            ? 'புதிய கிளினிக்-ஆ? மேலே "பதிவு" தேர்ந்தெடுங்க · New clinic? Choose Sign Up above.'
+            : 'ஏற்கனவே கணக்கு இருக்கா? மேலே "உள்நுழை" தேர்ந்தெடுங்க · Already have an account? Choose Log In.'}
         </p>
       </div>
     </div>
