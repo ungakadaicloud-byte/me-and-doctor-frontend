@@ -4,21 +4,54 @@ import api from '../lib/api';
 
 const AuthContext = createContext(null);
 
+// True when the current URL carries an auth payload Supabase still has
+// to process (an email-confirmation link, a recovery link, etc). While
+// that's pending, getSession() legitimately returns null — so treating
+// that null as "not logged in" would bounce the user straight back to
+// the login page a split second after they arrived.
+function urlHasAuthPayload() {
+  const hash = window.location.hash || '';
+  const search = window.location.search || '';
+  return hash.includes('access_token') || hash.includes('error_description') || search.includes('code=');
+}
+
 export function AuthProvider({ children }) {
   const [session, setSession] = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => {
-      setSession(data.session);
+    let settled = false;
+    let fallbackTimer;
+
+    const finish = (newSession) => {
+      settled = true;
+      clearTimeout(fallbackTimer);
+      setSession(newSession);
       setLoading(false);
-    });
+    };
 
     const { data: listener } = supabase.auth.onAuthStateChange((_event, newSession) => {
+      // Always keep the live session in sync, including sign-out.
       setSession(newSession);
+      if (newSession && !settled) finish(newSession);
     });
 
-    return () => listener.subscription.unsubscribe();
+    supabase.auth.getSession().then(({ data }) => {
+      if (data.session) { finish(data.session); return; }
+
+      // No session yet. If the URL is mid-auth, wait for the listener
+      // rather than declaring the user logged out immediately.
+      if (urlHasAuthPayload()) {
+        fallbackTimer = setTimeout(() => { if (!settled) finish(null); }, 8000);
+      } else {
+        finish(null);
+      }
+    });
+
+    return () => {
+      clearTimeout(fallbackTimer);
+      listener.subscription.unsubscribe();
+    };
   }, []);
 
   // Email + password, deliberately chosen over magic links and emailed
