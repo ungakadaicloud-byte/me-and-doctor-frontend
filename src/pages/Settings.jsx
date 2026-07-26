@@ -109,25 +109,31 @@ export default function Settings() {
               going to type out the whole weekly schedule by hand. */}
           <div>
             <label className="text-xs text-ink-soft">கிளினிக் நேரம் · Clinic Timings</label>
+            {/* Every row uses the same fixed column widths (shrink-0 on
+                the day button, flex-1 on each time field). Previously
+                the day button sized itself to its own text, so rows with
+                longer Tamil day names — ஞாயிறு vs புதன் — pushed the
+                time fields to different horizontal positions and nothing
+                lined up down the column. */}
             <div className="mt-1 border border-ink/15 rounded divide-y divide-ink/10">
               {DAYS.map(({ key, ta }) => {
                 const day = timings[key];
                 return (
-                  <div key={key} className="flex items-center gap-2 px-3 py-2">
+                  <div key={key} className="flex items-center gap-2 px-2 py-2">
                     <button type="button" onClick={() => updateDay(key, { open: !day.open })}
-                      className={`text-xs px-2 py-1 rounded font-medium w-24 ${day.open ? 'bg-sage text-cream' : 'bg-parchment text-ink-soft'}`}>
+                      className={`shrink-0 w-20 text-[11px] px-1 py-1.5 rounded font-medium text-center ${day.open ? 'bg-sage text-cream' : 'bg-parchment text-ink-soft'}`}>
                       {ta} {day.open ? '✓' : '✕'}
                     </button>
                     {day.open ? (
-                      <div className="flex items-center gap-1 text-xs">
+                      <>
                         <input type="time" value={day.start} onChange={(e) => updateDay(key, { start: e.target.value })}
-                          className="border border-ink/15 rounded px-1.5 py-1" />
-                        <span className="text-ink-soft">–</span>
+                          className="flex-1 min-w-0 border border-ink/15 rounded px-1 py-1 text-xs" />
+                        <span className="shrink-0 text-ink-soft text-xs">–</span>
                         <input type="time" value={day.end} onChange={(e) => updateDay(key, { end: e.target.value })}
-                          className="border border-ink/15 rounded px-1.5 py-1" />
-                      </div>
+                          className="flex-1 min-w-0 border border-ink/15 rounded px-1 py-1 text-xs" />
+                      </>
                     ) : (
-                      <span className="text-xs text-ink-soft">மூடப்பட்டது · Closed</span>
+                      <span className="flex-1 text-xs text-ink-soft">மூடப்பட்டது · Closed</span>
                     )}
                   </div>
                 );
