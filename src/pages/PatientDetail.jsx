@@ -3,6 +3,12 @@ import { useParams, useLocation } from 'react-router-dom';
 import Header from '../components/Header';
 import { usePatientDetail, useVisits, usePrescriptions, useBilling } from '../hooks/useClinicData';
 import api from '../lib/api';
+import {
+  SUGAR_TYPES, DOSE_UNITS,
+  composeBP, parseBP, composeSugar, parseSugar, composeWeight, parseWeight,
+  composeDose, parseDose, composeFrequency, parseFrequency,
+  formatDateInput, dmyToISO,
+} from '../lib/clinical';
 
 const VISIT_STATUS_LABEL = { completed: 'முடிந்தது · Completed', cancelled: 'ரத்து · Cancelled' };
 
@@ -15,19 +21,24 @@ export default function PatientDetail() {
   const { recordPayment } = useBilling();
 
   const [chiefComplaint, setChiefComplaint] = useState('');
-  const [vitals, setVitals] = useState(() => {
-    // Auto-fills from whatever the assistant/nurse already captured in
-    // the queue while this patient was waiting — the doctor shouldn't
-    // have to re-type BP/Sugar/Weight that's already on file.
-    const queueVitals = location.state?.vitals;
-    return (queueVitals && Object.keys(queueVitals).length > 0)
-      ? queueVitals
-      : { bp: '', sugar: '', weight: '' };
+  // Auto-fills from whatever the assistant/nurse already captured in the
+  // queue while this patient was waiting — the doctor shouldn't have to
+  // re-type BP/Sugar/Weight that's already on file. Held as separate
+  // parts so each field can be constrained to valid input.
+  const queueVitals = location.state?.vitals || {};
+  const [bp, setBp] = useState(() => parseBP(queueVitals.bp));
+  const [sugar, setSugar] = useState(() => {
+    const parsed = parseSugar(queueVitals.sugar);
+    return { value: parsed.value, type: parsed.type || 'Fasting' };
   });
+  const [weight, setWeight] = useState(() => parseWeight(queueVitals.weight));
+
+  const onlyDigits = (v, max) => v.replace(/\D/g, '').slice(0, max);
   const [notes, setNotes] = useState('');
   const [diagnosis, setDiagnosis] = useState('');
   const [labTests, setLabTests] = useState('');
-  const [followUpDate, setFollowUpDate] = useState('');
+  const [followUpText, setFollowUpText] = useState('');
+  const followUpDate = dmyToISO(followUpText);
   const [medicines, setMedicines] = useState([{ name: '', dosage: '', frequency: '', duration: '' }]);
   const [advice, setAdvice] = useState('');
   const [savedRx, setSavedRx] = useState(null);
@@ -74,7 +85,11 @@ export default function PatientDetail() {
         soap_notes: notes,
         diagnosis,
         lab_tests: labTests,
-        vitals,
+        vitals: {
+          bp: composeBP(bp.systolic, bp.diastolic),
+          sugar: composeSugar(sugar.value, sugar.type),
+          weight: composeWeight(weight),
+        },
         follow_up_date: followUpDate || null,
       });
       setSavedVisit(visit);
@@ -89,9 +104,11 @@ export default function PatientDetail() {
       setNotes('');
       setDiagnosis('');
       setLabTests('');
-      setFollowUpDate('');
+      setFollowUpText('');
       setAdvice('');
-      setVitals({ bp: '', sugar: '', weight: '' });
+      setBp({ systolic: '', diastolic: '' });
+      setSugar({ value: '', type: 'Fasting' });
+      setWeight('');
       setMedicines([{ name: '', dosage: '', frequency: '', duration: '' }]);
       reload();
     } finally {
@@ -262,17 +279,48 @@ export default function PatientDetail() {
               className="w-full border border-ink/15 rounded px-3 py-2 text-sm"
               rows={2}
             />
-            <div className="grid grid-cols-3 gap-2">
-              <input placeholder="BP" value={vitals.bp} onChange={(e) => setVitals({ ...vitals, bp: e.target.value })}
-                className="border border-ink/15 rounded px-2 py-1.5 text-sm" />
-              <input placeholder="Sugar" value={vitals.sugar} onChange={(e) => setVitals({ ...vitals, sugar: e.target.value })}
-                className="border border-ink/15 rounded px-2 py-1.5 text-sm" />
-              <input placeholder="Weight" value={vitals.weight} onChange={(e) => setVitals({ ...vitals, weight: e.target.value })}
-                className="border border-ink/15 rounded px-2 py-1.5 text-sm" />
+            {/* Same constrained vitals entry as the queue-side capture:
+                numeric only, BP split into systolic/diastolic, and a
+                sugar reading always tagged fasting/PP/random. */}
+            <div className="space-y-2">
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-ink-soft w-24">BP (mmHg)</span>
+                <input type="tel" inputMode="numeric" placeholder="130" value={bp.systolic}
+                  onChange={(e) => setBp({ ...bp, systolic: onlyDigits(e.target.value, 3) })}
+                  className="border border-ink/15 rounded px-2 py-1.5 text-sm w-16 text-center" />
+                <span className="text-ink-soft">/</span>
+                <input type="tel" inputMode="numeric" placeholder="80" value={bp.diastolic}
+                  onChange={(e) => setBp({ ...bp, diastolic: onlyDigits(e.target.value, 3) })}
+                  className="border border-ink/15 rounded px-2 py-1.5 text-sm w-16 text-center" />
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-ink-soft w-24">Sugar (mg/dL)</span>
+                <input type="tel" inputMode="numeric" placeholder="110" value={sugar.value}
+                  onChange={(e) => setSugar({ ...sugar, value: onlyDigits(e.target.value, 3) })}
+                  className="border border-ink/15 rounded px-2 py-1.5 text-sm w-16 text-center" />
+                <select value={sugar.type} onChange={(e) => setSugar({ ...sugar, type: e.target.value })}
+                  className="border border-ink/15 rounded px-2 py-1.5 text-sm bg-white">
+                  {SUGAR_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
+                </select>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-ink-soft w-24">Weight</span>
+                <input type="tel" inputMode="decimal" placeholder="68" value={weight}
+                  onChange={(e) => setWeight(e.target.value.replace(/[^\d.]/g, '').slice(0, 5))}
+                  className="border border-ink/15 rounded px-2 py-1.5 text-sm w-16 text-center" />
+                <span className="text-sm text-ink-soft">kg</span>
+              </div>
             </div>
             <div>
-              <label className="text-xs text-ink-soft">அடுத்த வருகை தேதி · Follow-up Date</label>
-              <input type="date" value={followUpDate} onChange={(e) => setFollowUpDate(e.target.value)}
+              {/* Typed DD/MM/YYYY, matching how date of birth is entered
+                  on the Patients page — one consistent way to enter a
+                  date everywhere, instead of mixing a calendar picker
+                  here with a typed field there. */}
+              <label className="text-xs text-ink-soft">அடுத்த வருகை · Follow-up (DD/MM/YYYY)</label>
+              <input
+                type="text" inputMode="numeric" maxLength={10} placeholder="23/05/2026"
+                value={followUpText}
+                onChange={(e) => setFollowUpText(formatDateInput(e.target.value))}
                 className="mt-1 w-full border border-ink/15 rounded px-3 py-2 text-sm" />
             </div>
 
@@ -286,16 +334,61 @@ export default function PatientDetail() {
                 )}
               </div>
 
-              {medicines.map((m, i) => (
-                <div key={i} className="grid grid-cols-4 gap-2 mb-2">
-                  <input placeholder="Medicine" value={m.name} onChange={(e) => updateMedicine(i, 'name', e.target.value)}
-                    className="border border-ink/15 rounded px-2 py-1.5 text-sm col-span-2" />
-                  <input placeholder="Dosage" value={m.dosage} onChange={(e) => updateMedicine(i, 'dosage', e.target.value)}
-                    className="border border-ink/15 rounded px-2 py-1.5 text-sm" />
-                  <input placeholder="Freq / Days" value={m.frequency} onChange={(e) => updateMedicine(i, 'frequency', e.target.value)}
-                    className="border border-ink/15 rounded px-2 py-1.5 text-sm" />
-                </div>
-              ))}
+              {/* Dosage is a number plus an explicit unit, and frequency
+                  uses the morning-afternoon-night notation doctors
+                  actually write (1-1-2). Both were free-text before: a
+                  prescription reading "650" with no unit, or a frequency
+                  nobody knows how to fill, is a real clinical hazard. */}
+              {medicines.map((m, i) => {
+                const dose = parseDose(m.dosage);
+                const freq = parseFrequency(m.frequency);
+                return (
+                  <div key={i} className="border-t border-ink/10 pt-2 mb-3 first:border-t-0 first:pt-0">
+                    <input placeholder="Medicine name" value={m.name}
+                      onChange={(e) => updateMedicine(i, 'name', e.target.value)}
+                      className="border border-ink/15 rounded px-2 py-1.5 text-sm w-full mb-2" />
+
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className="text-[11px] text-ink-soft w-16">அளவு · Dose</span>
+                      <input type="tel" inputMode="decimal" placeholder="650" value={dose.amount}
+                        onChange={(e) => updateMedicine(i, 'dosage', composeDose(e.target.value.replace(/[^\d.]/g, '').slice(0, 6), dose.unit))}
+                        className="border border-ink/15 rounded px-2 py-1.5 text-sm w-20 text-center" />
+                      <select value={dose.unit}
+                        onChange={(e) => updateMedicine(i, 'dosage', composeDose(dose.amount, e.target.value))}
+                        className="border border-ink/15 rounded px-2 py-1.5 text-sm bg-white">
+                        {DOSE_UNITS.map((u) => <option key={u} value={u}>{u}</option>)}
+                      </select>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      <span className="text-[11px] text-ink-soft w-16">வேளை</span>
+                      <div className="flex items-center gap-1">
+                        {[
+                          { key: 'morning', label: 'கா', val: freq.morning },
+                          { key: 'afternoon', label: 'ம', val: freq.afternoon },
+                          { key: 'night', label: 'இ', val: freq.night },
+                        ].map((slot, idx) => (
+                          <div key={slot.key} className="flex items-center">
+                            {idx > 0 && <span className="text-ink-soft mx-0.5">-</span>}
+                            <div className="text-center">
+                              <input
+                                type="tel" inputMode="numeric" maxLength={1} placeholder="0" value={slot.val}
+                                onChange={(e) => {
+                                  const v = e.target.value.replace(/\D/g, '').slice(0, 1);
+                                  const next = { ...freq, [slot.key]: v };
+                                  updateMedicine(i, 'frequency', composeFrequency(next.morning, next.afternoon, next.night));
+                                }}
+                                className="border border-ink/15 rounded px-1 py-1.5 text-sm w-9 text-center" />
+                              <div className="text-[9px] text-ink-soft mt-0.5">{slot.label}</div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                      <span className="text-[10px] text-ink-soft">காலை-மதியம்-இரவு</span>
+                    </div>
+                  </div>
+                );
+              })}
               <button onClick={addMedicineRow} type="button" className="text-xs text-ink-soft hover:text-ink">
                 + மருந்து சேர் · Add medicine
               </button>
