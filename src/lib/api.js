@@ -28,13 +28,29 @@ api.interceptors.response.use(
   (res) => res,
   async (err) => {
     if (err.response?.status === 401) {
-      await supabase.auth.signOut();
-      window.location.href = '/login';
+      // Deliberately does NOT sign the user out here.
+      //
+      // The previous version called supabase.auth.signOut() on any 401,
+      // which meant a single failing backend call destroyed a perfectly
+      // valid session: the user would log in, land on the dashboard,
+      // one request would 401, and they'd be thrown back to the login
+      // screen — looking exactly like "login doesn't work" when login
+      // had in fact succeeded.
+      //
+      // Only redirect if there genuinely is no session; if a session
+      // exists, the 401 is a server-side problem and destroying the
+      // user's login is both wrong and hides the real cause.
+      const { data } = await supabase.auth.getSession();
+      if (!data.session && window.location.pathname !== '/login') {
+        window.location.href = '/login';
+      }
     } else if (err.response?.status === 403 && err.response.data?.error === 'no_clinic_for_user') {
       // Valid session, but this person hasn't finished clinic
       // onboarding yet — send them to finish it instead of showing
       // broken protected pages.
-      window.location.href = '/onboarding';
+      if (window.location.pathname !== '/onboarding') {
+        window.location.href = '/onboarding';
+      }
     }
     return Promise.reject(err);
   }
