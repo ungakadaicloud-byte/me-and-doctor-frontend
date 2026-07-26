@@ -4,11 +4,6 @@ import { useAuth } from '../hooks/useAuth';
 import api from '../lib/api';
 import logo from '../assets/logo.png';
 
-// e.g. https://abcd1234.supabase.co -> abcd1234
-const projectRef = (import.meta.env.VITE_SUPABASE_URL || 'NOT SET')
-  .replace('https://', '')
-  .replace('.supabase.co', '');
-
 export default function Login() {
   const { signIn, signUp, sendPasswordReset } = useAuth();
   const navigate = useNavigate();
@@ -188,15 +183,6 @@ export default function Login() {
             கடவுச்சொல் மறந்துவிட்டதா? · Forgot password?
           </button>
         )}
-
-        {/* Diagnostic: shows which Supabase project this build actually
-            authenticates against. "Invalid login credentials" for a user
-            that provably exists means the app and the dashboard are
-            pointed at different projects — this makes that visible
-            instead of requiring guesswork. */}
-        <p className="text-center text-[10px] text-ink-soft/60 mt-4 break-all">
-          auth: {projectRef}
-        </p>
 
         <p className="text-center text-xs text-ink-soft mt-6">
           {mode === 'login'
