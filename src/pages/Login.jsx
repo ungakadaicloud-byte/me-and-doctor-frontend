@@ -11,6 +11,7 @@ export default function Login() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [info, setInfo] = useState('');
   const [busy, setBusy] = useState(false);
 
   // After auth succeeds: existing doctor -> dashboard, brand-new
@@ -31,6 +32,7 @@ export default function Login() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
+    setInfo('');
     setBusy(true);
     try {
       if (mode === 'signup') {
@@ -38,7 +40,18 @@ export default function Login() {
           setError('கடவுச்சொல் குறைந்தது 6 எழுத்துகள் இருக்க வேண்டும்.');
           return;
         }
-        await signUp(email, password);
+        const newSession = await signUp(email, password);
+        // With "Confirm email" enabled in Supabase, signUp returns no
+        // session — the account exists but can't be used until the
+        // emailed link is clicked. Say so plainly instead of pushing
+        // the user into a protected route that will bounce them back.
+        if (!newSession) {
+          setError('');
+          setInfo('கணக்கு உருவாக்கப்பட்டது. மின்னஞ்சலைத் திறந்து உறுதிசெய்து, பிறகு உள்நுழையுங்கள்.');
+          setMode('login');
+          setPassword('');
+          return;
+        }
       } else {
         await signIn(email, password);
       }
@@ -48,10 +61,15 @@ export default function Login() {
       const msg = err?.message || '';
       if (/already registered|already exists/i.test(msg)) {
         setError('இந்த மின்னஞ்சல் ஏற்கனவே பதிவு செய்யப்பட்டுள்ளது. உள்நுழையுங்கள்.');
+      } else if (/email not confirmed/i.test(msg)) {
+        setError('மின்னஞ்சல் இன்னும் உறுதிசெய்யப்படவில்லை. மின்னஞ்சலில் உள்ள இணைப்பைத் தொடவும்.');
       } else if (/invalid login credentials/i.test(msg)) {
         setError('மின்னஞ்சல் அல்லது கடவுச்சொல் தவறு.');
       } else {
-        setError('முடியவில்லை. மீண்டும் முயற்சிக்கவும்.');
+        // Shows the underlying message rather than swallowing it — a
+        // generic "something went wrong" made every distinct failure
+        // look identical and impossible to diagnose.
+        setError(msg || 'முடியவில்லை. மீண்டும் முயற்சிக்கவும்.');
       }
     } finally {
       setBusy(false);
@@ -70,14 +88,14 @@ export default function Login() {
         <div className="flex mb-6 bg-parchment rounded p-1">
           <button
             type="button"
-            onClick={() => { setMode('login'); setError(''); }}
+            onClick={() => { setMode('login'); setError(''); setInfo(''); }}
             className={`flex-1 py-2 rounded text-sm font-medium ${mode === 'login' ? 'bg-white text-ink shadow-sm' : 'text-ink-soft'}`}
           >
             உள்நுழை · Log In
           </button>
           <button
             type="button"
-            onClick={() => { setMode('signup'); setError(''); }}
+            onClick={() => { setMode('signup'); setError(''); setInfo(''); }}
             className={`flex-1 py-2 rounded text-sm font-medium ${mode === 'signup' ? 'bg-white text-ink shadow-sm' : 'text-ink-soft'}`}
           >
             பதிவு · Sign Up
@@ -110,6 +128,7 @@ export default function Login() {
               <div className="text-[11px] text-ink-soft mt-1">குறைந்தது 6 எழுத்துகள் · At least 6 characters</div>
             )}
           </div>
+          {info && <p className="text-sage text-xs">{info}</p>}
           {error && <p className="text-clay text-xs">{error}</p>}
           <button
             disabled={busy || !email || !password}
