@@ -1,35 +1,31 @@
 import { useEffect, useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../hooks/useAuth';
+import { supabase } from '../lib/supabaseClient';
 import api from '../lib/api';
 
-const MAX_ATTEMPTS = 3;
-const RETRY_DELAY_MS = 1500;
+const MAX_API_ATTEMPTS = 3;
+const API_RETRY_DELAY_MS = 1500;
+// Supabase parses the magic-link token out of the URL asynchronously.
+// The previous version checked for a session on the very first render
+// and immediately showed "link didn't work" if it wasn't there yet —
+// which it never is, because parsing hasn't finished. This waits for
+// the session to actually arrive before deciding anything failed.
+const SESSION_WAIT_MS = 8000;
 
 export default function AuthCallback() {
-  const { session, loading } = useAuth();
   const navigate = useNavigate();
   const [error, setError] = useState('');
   const [retrying, setRetrying] = useState(false);
   const attemptRef = useRef(0);
+  const settledRef = useRef(false);
 
   useEffect(() => {
-    if (loading) return; // wait for supabase-js to finish parsing the URL
-
-    if (!session) {
-      // Link expired, already used, or something went wrong.
-      setError('உள்நுழை இணைப்பு வேலை செய்யவில்லை. மீண்டும் முயற்சிக்கவும்.');
-      return;
-    }
-
     let cancelled = false;
+    let timeoutId;
 
-    // Retries a few times before showing an error — the backend can be
-    // slow to respond right after a cold start (Railway's free/hobby
-    // plan sleeps idle services), which previously showed a scary error
-    // on the very first login attempt even though the session itself
-    // was fine and a second click always worked.
-    const attempt = () => {
+    // Once a session exists, decide where the doctor lands: dashboard
+    // if their clinic is already set up, onboarding if it isn't.
+    const routeWithSession = () => {
       attemptRef.current += 1;
       api.get('/api/clinic')
         .then(() => { if (!cancelled) navigate('/'); })
@@ -41,18 +37,62 @@ export default function AuthCallback() {
             return;
           }
 
-          if (attemptRef.current < MAX_ATTEMPTS) {
+          // Backend cold starts can make the first call fail even though
+          // the session itself is fine — retry before showing an error.
+          if (attemptRef.current < MAX_API_ATTEMPTS) {
             setRetrying(true);
-            setTimeout(attempt, RETRY_DELAY_MS);
+            setTimeout(routeWithSession, API_RETRY_DELAY_MS);
           } else {
             setError('ஏதோ தவறு நடந்தது. மீண்டும் முயற்சிக்கவும்.');
           }
         });
     };
 
-    attempt();
-    return () => { cancelled = true; };
-  }, [session, loading, navigate]);
+    const settle = (session) => {
+      if (settledRef.current || cancelled) return;
+      settledRef.current = true;
+      clearTimeout(timeoutId);
+      if (session) routeWithSession();
+    };
+
+    // Fires when supabase-js finishes parsing the token out of the URL.
+    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (session) settle(session);
+    });
+
+    // Covers the case where the session was already established before
+    // this component mounted (listener wouldn't fire again).
+    (async () => {
+      // PKCE-style links arrive as ?code=... and need an explicit
+      // exchange; implicit-style links arrive as #access_token=... and
+      // are handled automatically by detectSessionInUrl.
+      const code = new URLSearchParams(window.location.search).get('code');
+      if (code) {
+        try {
+          const { data } = await supabase.auth.exchangeCodeForSession(code);
+          if (data?.session) { settle(data.session); return; }
+        } catch {
+          // Fall through — the listener may still deliver a session.
+        }
+      }
+
+      const { data } = await supabase.auth.getSession();
+      if (data.session) settle(data.session);
+    })();
+
+    // Only after genuinely waiting do we conclude the link failed.
+    timeoutId = setTimeout(() => {
+      if (settledRef.current || cancelled) return;
+      settledRef.current = true;
+      setError('உள்நுழை இணைப்பு வேலை செய்யவில்லை. மீண்டும் முயற்சிக்கவும்.');
+    }, SESSION_WAIT_MS);
+
+    return () => {
+      cancelled = true;
+      clearTimeout(timeoutId);
+      listener.subscription.unsubscribe();
+    };
+  }, [navigate]);
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-cream px-4">
